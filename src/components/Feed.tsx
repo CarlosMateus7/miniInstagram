@@ -12,7 +12,6 @@ import {
   arrayRemove,
   addDoc,
   serverTimestamp,
-  where,
   getDocs,
   deleteDoc,
 } from "firebase/firestore";
@@ -21,7 +20,6 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
@@ -67,7 +65,7 @@ export default function Feed() {
     return () => unsubscribe();
   }, []);
 
-  // Carrega os posts
+  // Load Posts
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -82,7 +80,7 @@ export default function Feed() {
     return () => unsubscribe();
   }, []);
 
-  // Carrega todos os comentários ao montar o feed
+  // Load Comments
   useEffect(() => {
     const fetchAllComments = async () => {
       const q = query(collection(db, "comments"));
@@ -110,7 +108,7 @@ export default function Feed() {
       });
       setNewComment("");
 
-      // Recarregar comentários após envio
+      // Load comments after send
       const q = query(collection(db, "comments"));
       const snapshot = await getDocs(q);
       const allComments = snapshot.docs.map((doc) => ({
@@ -147,11 +145,7 @@ export default function Feed() {
 
   return (
     <div className="max-w-xl mx-auto mt-10 space-y-6">
-      {/* Botão Novo Post */}
       <div className="flex justify-end mb-4">
-        {/* <Link href="/upload">
-          <Button variant="outline">Novo Post</Button>
-        </Link> */}
         {currentUserId && (
           <Button
             variant="secondary"
@@ -162,7 +156,7 @@ export default function Feed() {
         )}
       </div>
 
-      {/* Modal de exclusão */}
+      {/* Delete Post Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-md shadow-lg max-w-sm w-full space-y-4">
@@ -202,7 +196,7 @@ export default function Feed() {
             return (
               <Card key={post.id}>
                 <CardContent className="p-4 space-y-2">
-                  {/* Cabeçalho do post */}
+                  {/* Post Header */}
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">
                       {post.userName ?? post.userId}
@@ -221,7 +215,7 @@ export default function Feed() {
                     )}
                   </div>
 
-                  {/* Imagem */}
+                  {/* Photo */}
                   <div className="relative w-full h-[400px]">
                     <Image
                       src={post.imageUrl}
@@ -231,7 +225,7 @@ export default function Feed() {
                     />
                   </div>
 
-                  {/* Legenda */}
+                  {/* Caption */}
                   <p className="text-sm text-gray-700">{post.caption}</p>
 
                   {/* Likes */}
@@ -254,13 +248,11 @@ export default function Feed() {
                         )
                       }
                     >
-                      {post.likes?.includes(currentUserId)
-                        ? "Descurtir"
-                        : "Curtir"}
+                      {post.likes?.includes(currentUserId) ? "Dislike" : "Like"}
                     </Button>
                   </div>
 
-                  {/* Comentários */}
+                  {/* Comments */}
                   <div className="mt-4 space-y-1">
                     {postComments.map((comment) => (
                       <div key={comment.id} className="p-2 text-sm">
@@ -269,7 +261,7 @@ export default function Feed() {
                     ))}
                   </div>
 
-                  {/* Campo de novo comentário */}
+                  {/* New Comment Field */}
                   <div className="mt-2">
                     <textarea
                       className="w-full p-2 border rounded-md"

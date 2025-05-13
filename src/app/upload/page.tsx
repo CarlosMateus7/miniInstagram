@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 
-// Importação dinâmica para garantir que o componente seja carregado apenas no cliente
 const PostUploader = dynamic(() => import("@/components/PostUploader"), {
   ssr: false,
 });

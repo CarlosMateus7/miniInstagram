@@ -3,18 +3,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import {
-  auth,
-  googleProvider,
-  signInWithPopup,
-  signOut,
-} from "../lib/firebase";
+import { auth, googleProvider, signInWithPopup } from "../lib/firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { db } from "../lib/firebase"; // Importando o Firestore
+import { db } from "../lib/firebase";
 
 const Login = () => {
   const {
@@ -25,15 +20,15 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Função para criar o perfil no Firestore
-  const createUserProfile = async (user) => {
+  // Function to create user in Firestore
+  const createUserProfile = async (user: any) => {
     const userRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userRef);
 
     if (!userDoc.exists()) {
-      // Criar um novo perfil se o usuário ainda não tiver um
+      // Create a new profile if there is not one already Created
       await setDoc(userRef, {
-        userName: user.displayName || "Usuário sem nome",
+        userName: user.displayName || "User sem nome",
         email: user.email,
         photoURL: user.photoURL || null,
         createdAt: new Date(),
@@ -47,7 +42,7 @@ const Login = () => {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      // Criar o perfil do usuário no Firestore
+      // Create profile in Firestore
       await createUserProfile(user);
 
       router.push("/feed");
@@ -71,7 +66,7 @@ const Login = () => {
       );
       const user = userCredential.user;
 
-      // Criar o perfil do usuário no Firestore
+      // Create profile in Firestore
       await createUserProfile(user);
 
       router.push("/feed");
@@ -95,7 +90,7 @@ const Login = () => {
       );
       const user = userCredential.user;
 
-      // Criar o perfil do usuário no Firestore
+      // Create profile in Firestore
       await createUserProfile(user);
 
       router.push("/feed");
@@ -156,7 +151,7 @@ const Login = () => {
             className="w-full bg-blue-500 text-white py-2 rounded-md mt-4"
             disabled={loading}
           >
-            {loading ? "Carregando..." : "Entrar com Email"}
+            {loading ? "Loading..." : "Entrar com Email"}
           </button>
         </form>
 
@@ -166,7 +161,7 @@ const Login = () => {
             className="w-full bg-red-500 text-white py-2 rounded-md"
             disabled={loading}
           >
-            {loading ? "Carregando..." : "Entrar com Google"}
+            {loading ? "Loading..." : "Entrar com Google"}
           </button>
         </div>
 
@@ -176,7 +171,7 @@ const Login = () => {
             className="w-full bg-green-500 text-white py-2 rounded-md"
             disabled={loading}
           >
-            {loading ? "Carregando..." : "Criar uma conta"}
+            {loading ? "Loading..." : "Criar uma conta"}
           </button>
         </div>
       </div>

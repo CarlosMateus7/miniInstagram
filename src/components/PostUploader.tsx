@@ -28,10 +28,10 @@ export default function PostUploader() {
     setLoading(true);
 
     try {
-      // 🔁 Upload para Cloudinary
+      // 🔁 Upload to Cloudinary
       const formData = new FormData();
       formData.append("file", imageFile);
-      formData.append("upload_preset", "unsigned_preset"); // substitua
+      formData.append("upload_preset", "unsigned_preset");
       const res = await fetch(
         "https://api.cloudinary.com/v1_1/dgapgiwov/upload",
         {
@@ -45,7 +45,7 @@ export default function PostUploader() {
       const user = auth.currentUser;
       const { displayName, uid } = user;
 
-      // 🔁 Salva post no Firestore
+      // Save post on Firestore
       await addDoc(collection(db, "posts"), {
         imageUrl,
         caption,
@@ -55,11 +55,10 @@ export default function PostUploader() {
         likes: [],
       });
 
-      // 🔁 Limpa os campos
+      // Clean the fields
       setCaption("");
       setImageFile(null);
 
-      // 🔁 Redireciona para o feed
       router.push("/feed");
     } catch (err) {
       console.error("Erro ao fazer upload:", err);
