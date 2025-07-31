@@ -26,6 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
+import { Post } from "../app/types/index";
 
 const DEFAULT_PROFILE_IMAGE = "/default-profile.png";
 
@@ -34,7 +35,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
   const [userName, setUserName] = useState<string>("");
   const [biography, setBiography] = useState<string | null>(null);
   const [postCount, setPostCount] = useState<number>(0);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [open, setOpen] = useState(false);
@@ -55,7 +56,12 @@ export default function ProfilePage({ userId }: { userId: string }) {
     const fetchPostsData = async () => {
       const q = query(collection(db, "posts"), where("userId", "==", userId));
       const snapshot = await getDocs(q);
-      const postsData = snapshot.docs.map((doc) => doc.data());
+
+      const postsData: Post[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Post[];
+
       setPosts(postsData);
       setPostCount(postsData.length);
     };
@@ -113,6 +119,8 @@ export default function ProfilePage({ userId }: { userId: string }) {
     router.push("/login");
   };
 
+  console.log("posts", posts);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-start px-4">
       <div className="w-full flex items-center justify-start px-4 py-4">
@@ -120,8 +128,8 @@ export default function ProfilePage({ userId }: { userId: string }) {
           <Image
             src="/mini-instagram-logo.png"
             alt="Mini Instagram"
-            width={120}
-            height={40}
+            width={90}
+            height={90}
             className="cursor-pointer"
           />
         </Link>

@@ -12,6 +12,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import CommentSection from "@/components/CommentSection";
+import Image from "next/image";
 
 type Post = {
   id: string;
@@ -60,10 +61,12 @@ export default function PostCard({ post }: { post: Post }) {
 
   return (
     <div className="border rounded-xl p-4 mb-4 shadow-sm">
-      <img
+      <Image
         src={post.imageUrl}
         alt={post.caption}
-        className="w-full rounded-lg mb-2"
+        width={800}
+        height={600}
+        className="w-full rounded-lg mb-2 object-cover"
       />
       <p className="text-sm text-gray-600 mb-2">{post.caption}</p>
       <Button

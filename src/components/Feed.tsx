@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Heart, MessageCircle } from "lucide-react";
 import {
   onSnapshot,
   collection,
@@ -15,19 +16,22 @@ import {
   getDocs,
   deleteDoc,
 } from "firebase/firestore";
-import { db } from "../lib/firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { db, auth } from "@/lib/firebase";
+import PostModal from "./PostModal";
+import { Timestamp } from "@/app/types";
 
 interface Post {
   id: string;
   imageUrl: string;
   caption: string;
-  createdAt: any;
+  createdAt: Timestamp;
   userId: string;
   userName?: string;
   likes: string[];
@@ -39,18 +43,26 @@ interface Comment {
   userId: string;
   userName: string;
   text: string;
-  createdAt: any;
+  createdAt: Timestamp;
 }
 
 export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newComment, setNewComment] = useState<string>("");
+  const [newComments, setNewComments] = useState<{ [postId: string]: string }>(
+    {}
+  );
   const [userName, setUserName] = useState<string>("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedPostComments, setSelectedPostComments] = useState<Comment[]>(
+    []
+  );
+  // const [modalPost, setModalPost] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -65,14 +77,27 @@ export default function Feed() {
     return () => unsubscribe();
   }, []);
 
+  function openModal(post: Post) {
+    setSelectedPost(post);
+    // filtra os comentários do post selecionado
+    const postComments = comments.filter(
+      (comment) => comment.postId === post.id
+    );
+    setSelectedPostComments(postComments);
+    setIsModalOpen(true);
+  }
+
   // Load Posts
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const updatedPosts = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Post),
-      }));
+      const updatedPosts = snapshot.docs.map((doc) => {
+        const data = doc.data() as Omit<Post, "id">;
+        return {
+          id: doc.id,
+          ...data,
+        };
+      });
       setPosts(updatedPosts);
       setLoading(false);
     });
@@ -85,10 +110,13 @@ export default function Feed() {
     const fetchAllComments = async () => {
       const q = query(collection(db, "comments"));
       const snapshot = await getDocs(q);
-      const allComments = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Comment),
-      }));
+      const allComments = snapshot.docs.map((doc) => {
+        const data = doc.data() as Omit<Comment, "id">;
+        return {
+          id: doc.id,
+          ...data,
+        };
+      });
       setComments(allComments);
     };
 
@@ -96,25 +124,30 @@ export default function Feed() {
   }, []);
 
   const handleCommentSubmit = async (postId: string) => {
-    if (!newComment.trim()) return;
+    const commentText = newComments[postId];
+    if (!commentText?.trim()) return;
 
     try {
       await addDoc(collection(db, "comments"), {
         postId,
         userId: currentUserId,
         userName,
-        text: newComment,
+        text: commentText,
         createdAt: serverTimestamp(),
       });
-      setNewComment("");
 
-      // Load comments after send
+      setNewComments((prev) => ({ ...prev, [postId]: "" }));
+
+      // Reload comments
       const q = query(collection(db, "comments"));
       const snapshot = await getDocs(q);
-      const allComments = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Comment),
-      }));
+      const allComments = snapshot.docs.map((doc) => {
+        const data = doc.data() as Omit<Comment, "id">;
+        return {
+          id: doc.id,
+          ...data,
+        };
+      });
       setComments(allComments);
     } catch (error) {
       console.error("Erro ao adicionar comentário:", error);
@@ -144,144 +177,207 @@ export default function Feed() {
   };
 
   return (
-    <div className="max-w-xl mx-auto mt-10 space-y-6">
-      <div className="flex justify-end mb-4">
-        {currentUserId && (
-          <Button
-            variant="secondary"
-            onClick={() => router.push(`/profile/${currentUserId}`)}
-          >
-            Meu Perfil
-          </Button>
-        )}
+    <div className="grid grid-cols-12 gap-6 mt-10 px-4">
+      <div className="col-span-3">
+        <div className="w-full flex items-center justify-start px-4 py-4">
+          <Link href="/feed">
+            <Image
+              src="/mini-instagram-logo.png"
+              alt="Mini Instagram"
+              width={90}
+              height={90}
+              className="cursor-pointer"
+            />
+          </Link>
+        </div>
       </div>
-
-      {/* Delete Post Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded-md shadow-lg max-w-sm w-full space-y-4">
-            <h2 className="text-lg font-semibold">Excluir Post</h2>
-            <p>Tem certeza que deseja excluir este post?</p>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteModal(false)}
-              >
-                Cancelar
-              </Button>
-              <Button variant="destructive" onClick={handleDeletePost}>
-                Excluir
-              </Button>
+      <div className="col-span-6 space-y-6 mt-[95px]">
+        {/* Delete Post Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded-md shadow-lg max-w-sm w-full space-y-4">
+              <h2 className="text-lg font-semibold">Excluir Post</h2>
+              <p>Tem certeza que deseja excluir este post?</p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button variant="destructive" onClick={handleDeletePost}>
+                  Excluir
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Loading */}
-      {loading
-        ? [...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-4 space-y-2">
-                <Skeleton className="h-[300px] w-full rounded-md" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-              </CardContent>
-            </Card>
-          ))
-        : posts.map((post) => {
-            const postComments = comments
-              .filter((comment) => comment.postId === post.id)
-              .sort((a, b) => a.createdAt?.seconds - b.createdAt?.seconds);
-
-            return (
-              <Card key={post.id}>
+        {/* Loading */}
+        {loading
+          ? [...Array(3)].map((_, i) => (
+              <Card key={i}>
                 <CardContent className="p-4 space-y-2">
-                  {/* Post Header */}
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium">
-                      {post.userName ?? post.userId}
-                    </span>
-                    {post.userId === currentUserId && (
-                      <button
-                        onClick={() => {
-                          setSelectedPostId(post.id);
-                          setShowDeleteModal(true);
-                        }}
-                        className="text-xl px-2 hover:text-red-500"
-                        aria-label="Mais opções"
-                      >
-                        ...
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Photo */}
-                  <div className="relative w-full h-[400px]">
-                    <Image
-                      src={post.imageUrl}
-                      alt="Post"
-                      fill
-                      className="object-cover rounded-md"
-                    />
-                  </div>
-
-                  {/* Caption */}
-                  <p className="text-sm text-gray-700">{post.caption}</p>
-
-                  {/* Likes */}
-                  <div className="flex justify-between items-center text-xs text-muted-foreground">
-                    <span>
-                      {post.likes?.length} likes •{" "}
-                      {post.userName ?? post.userId}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant={
-                        post.likes?.includes(currentUserId)
-                          ? "default"
-                          : "outline"
-                      }
-                      onClick={() =>
-                        handleLikeToggle(
-                          post.id,
-                          post.likes?.includes(currentUserId)
-                        )
-                      }
-                    >
-                      {post.likes?.includes(currentUserId) ? "Dislike" : "Like"}
-                    </Button>
-                  </div>
-
-                  {/* Comments */}
-                  <div className="mt-4 space-y-1">
-                    {postComments.map((comment) => (
-                      <div key={comment.id} className="p-2 text-sm">
-                        <strong>{comment.userName}:</strong> {comment.text}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* New Comment Field */}
-                  <div className="mt-2">
-                    <textarea
-                      className="w-full p-2 border rounded-md"
-                      placeholder="Escreva um comentário..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-2"
-                      onClick={() => handleCommentSubmit(post.id)}
-                    >
-                      Comentar
-                    </Button>
-                  </div>
+                  <Skeleton className="h-[300px] w-full rounded-md" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
                 </CardContent>
               </Card>
-            );
-          })}
+            ))
+          : posts.map((post) => {
+              const postComments = comments
+                .filter((comment) => comment.postId === post.id)
+                .sort((a, b) => a.createdAt?.seconds - b.createdAt?.seconds);
+
+              return (
+                <Card key={post.id}>
+                  <CardContent className="p-4 space-y-2">
+                    {/* Post Header */}
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium">
+                        {post.userName ?? post.userId}
+                      </span>
+                      {post.userId === currentUserId && (
+                        <button
+                          onClick={() => {
+                            setSelectedPostId(post.id);
+                            setShowDeleteModal(true);
+                          }}
+                          className="text-xl px-2 hover:text-red-500"
+                          aria-label="Mais opções"
+                        >
+                          ...
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Photo */}
+                    <div className="relative w-full h-[400px]">
+                      <Image
+                        src={post.imageUrl}
+                        alt="Post"
+                        fill
+                        className="object-cover rounded-md"
+                      />
+                    </div>
+
+                    {/* Caption */}
+                    <p className="text-sm text-gray-700">{post.caption}</p>
+
+                    {/* Likes */}
+                    <div className="flex flex-col items-start gap-y-1">
+                      {/* Heart + MessageCircle lado a lado */}
+                      <div className="flex items-center gap-x-2">
+                        <button
+                          onClick={() =>
+                            handleLikeToggle(
+                              post.id,
+                              post.likes?.includes(currentUserId)
+                            )
+                          }
+                          className="p-0 m-0 border-none bg-transparent hover:opacity-80 transition"
+                          style={{ appearance: "none" }}
+                          aria-label="Gostar"
+                        >
+                          <Heart
+                            className={`w-5 h-5 transition-colors ${
+                              post.likes?.includes(currentUserId)
+                                ? "text-red-500 fill-red-500"
+                                : "text-muted-foreground"
+                            }`}
+                            fill={
+                              post.likes?.includes(currentUserId)
+                                ? "currentColor"
+                                : "none"
+                            }
+                          />
+                        </button>
+
+                        <button
+                          onClick={() => openModal(post)}
+                          className="p-0 m-0 border-none bg-transparent hover:opacity-80 transition"
+                          style={{ appearance: "none" }}
+                          aria-label="Ver comentários"
+                        >
+                          <MessageCircle className="w-5 h-5 text-muted-foreground" />
+                        </button>
+                      </div>
+
+                      {/* Contador por baixo dos ícones */}
+                      <span className="text-[10px]">
+                        {post.likes?.length > 0 &&
+                          `${post.likes.length} ${
+                            post.likes.length === 1 ? "gosto" : "gostos"
+                          }`}
+                      </span>
+                    </div>
+
+                    {/* Comments */}
+                    <div className="mt-4 space-y-1">
+                      {postComments.map((comment) => (
+                        <div key={comment.id} className="p-2 text-sm">
+                          <strong>{comment.userName}:</strong> {comment.text}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* New Comment Field */}
+                    <div className="mt-2">
+                      <textarea
+                        className="w-full p-2 border rounded-md"
+                        placeholder="Escreva um comentário..."
+                        value={newComments[post.id] || ""}
+                        onChange={(e) =>
+                          setNewComments((prev) => ({
+                            ...prev,
+                            [post.id]: e.target.value,
+                          }))
+                        }
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => handleCommentSubmit(post.id)}
+                      >
+                        Comentar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+      </div>
+      {isModalOpen && selectedPost && (
+        <PostModal
+          post={selectedPost}
+          comments={selectedPostComments}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          newComments={newComments}
+          setNewComments={setNewComments}
+          handleCommentSubmit={handleCommentSubmit}
+        />
+      )}
+      <div className="col-span-3 flex justify-center items-start pt-2">
+        {currentUserId && (
+          <div
+            onClick={() => router.push(`/profile/${currentUserId}`)}
+            className="flex items-center gap-[10px] mt-[45px] cursor-pointer hover:opacity-80"
+          >
+            <Image
+              src={auth.currentUser?.photoURL || "/default-avatar.png"}
+              alt="Avatar"
+              width={40}
+              height={40}
+              className="rounded-full object-cover"
+            />
+            <span className="text-sm font-medium">
+              {auth.currentUser?.displayName || "Usuário"}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
