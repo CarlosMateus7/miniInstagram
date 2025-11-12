@@ -8,9 +8,10 @@ export interface Post {
   imageUrl: string;
   caption: string;
   userId: string;
-  userName?: string;
+  userName: string;
   likes: string[];
   createdAt: Timestamp;
+  userAvatar: string;
 }
 
 export interface Comment {
@@ -19,5 +20,14 @@ export interface Comment {
   userId: string;
   userName: string;
   text: string;
-  createdAt?: Date;
+  createdAt: Timestamp;
+}
+
+export interface User {
+  uid: string;
+  biography?: string;
+  userName: string;
+  email: string;
+  photoURL: string | null;
+  createdAt: Date;
 }

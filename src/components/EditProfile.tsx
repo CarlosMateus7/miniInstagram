@@ -96,7 +96,9 @@ export default function EditProfilePage({ userId }: { userId: string }) {
       <label className="block text-sm font-medium mb-1">Biografia</label>
       <Textarea
         value={biography}
-        onChange={(e: any) => setBiography(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+          setBiography(e.target.value)
+        }
         className="mb-4"
         placeholder="Fala um pouco sobre ti..."
       />

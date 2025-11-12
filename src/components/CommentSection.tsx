@@ -12,13 +12,14 @@ import {
 } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Timestamp } from "@/app/types";
 
 type Comment = {
   id: string;
   text: string;
   userId: string;
   displayName: string;
-  createdAt: any;
+  createdAt: Timestamp;
 };
 
 export default function CommentSection({ postId }: { postId: string }) {
@@ -51,6 +52,7 @@ export default function CommentSection({ postId }: { postId: string }) {
       text,
       userId: user.uid,
       displayName: user.displayName || "Anônimo",
+      userAvatar: auth.currentUser?.photoURL || "/default-avatar.png",
       createdAt: serverTimestamp(),
     });
 

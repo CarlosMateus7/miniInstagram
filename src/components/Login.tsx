@@ -3,60 +3,76 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { auth, googleProvider, signInWithPopup } from "../lib/firebase";
+import { auth, googleProvider } from "../lib/firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithPopup,
+  User as FirebaseUser,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { User as AppUser } from "@/app/types";
+
+type LoginFormInputs = {
+  email: string;
+  password: string;
+};
 
 const Login = () => {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
+  } = useForm<LoginFormInputs>();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Function to create user in Firestore
-  const createUserProfile = async (user: any) => {
+  // Converte FirebaseUser para AppUser
+  const firebaseUserToAppUser = (user: FirebaseUser): AppUser => ({
+    uid: user.uid,
+    userName: user.displayName || "Utilizador sem nome",
+    email: user.email || "",
+    photoURL: user.photoURL || null,
+    createdAt: new Date(),
+  });
+
+  // Cria perfil no Firestore se não existir
+  const createUserProfile = async (user: AppUser) => {
     const userRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userRef);
 
     if (!userDoc.exists()) {
-      // Create a new profile if there is not one already Created
       await setDoc(userRef, {
-        userName: user.displayName || "User sem nome",
+        uid: user.uid,
+        userName: user.userName,
         email: user.email,
-        photoURL: user.photoURL || null,
-        createdAt: new Date(),
+        photoURL: user.photoURL,
+        createdAt: user.createdAt,
       });
     }
   };
 
+  // Login com Google
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      // Create profile in Firestore
-      await createUserProfile(user);
+      const appUser = firebaseUserToAppUser(user);
+      await createUserProfile(appUser);
 
       router.push("/feed");
-      setLoading(false);
     } catch (error) {
       console.error("Erro ao fazer login com Google:", error);
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleEmailLogin = async (data: {
-    email: string;
-    password: string;
-  }) => {
+  // Login com email e senha
+  const handleEmailLogin = async (data: LoginFormInputs) => {
     try {
       setLoading(true);
       const userCredential = await signInWithEmailAndPassword(
@@ -65,22 +81,20 @@ const Login = () => {
         data.password
       );
       const user = userCredential.user;
+      const appUser = firebaseUserToAppUser(user);
 
-      // Create profile in Firestore
-      await createUserProfile(user);
+      await createUserProfile(appUser);
 
       router.push("/feed");
-      setLoading(false);
     } catch (error) {
       console.error("Erro ao fazer login com email:", error);
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleEmailSignup = async (data: {
-    email: string;
-    password: string;
-  }) => {
+  // Criar conta com email e senha
+  const handleEmailSignup = async (data: LoginFormInputs) => {
     try {
       setLoading(true);
       const userCredential = await createUserWithEmailAndPassword(
@@ -89,27 +103,25 @@ const Login = () => {
         data.password
       );
       const user = userCredential.user;
+      const appUser = firebaseUserToAppUser(user);
 
-      // Create profile in Firestore
-      await createUserProfile(user);
+      await createUserProfile(appUser);
 
       router.push("/feed");
-      setLoading(false);
     } catch (error) {
-      console.error("Erro ao criar conta com email:", error);
+      console.error("Erro ao criar conta:", error);
+    } finally {
       setLoading(false);
     }
-  };
-
-  const onSubmit = (data: { email: string; password: string }) => {
-    handleEmailLogin(data);
   };
 
   return (
     <div className="flex justify-center items-center h-screen">
       <div className="max-w-sm w-full bg-white p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-bold text-center mb-6">Login</h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+        {/* Formulário para Login (email + senha) */}
+        <form onSubmit={handleSubmit(handleEmailLogin)} className="space-y-4">
           <div>
             <label
               htmlFor="email"
@@ -155,6 +167,7 @@ const Login = () => {
           </button>
         </form>
 
+        {/* Botão Login com Google */}
         <div className="text-center mt-4">
           <button
             onClick={handleGoogleLogin}
@@ -165,14 +178,17 @@ const Login = () => {
           </button>
         </div>
 
+        {/* Botão para Criar Conta - chama handleEmailSignup */}
         <div className="text-center mt-4">
-          <button
-            onClick={handleEmailSignup}
-            className="w-full bg-green-500 text-white py-2 rounded-md"
-            disabled={loading}
-          >
-            {loading ? "Loading..." : "Criar uma conta"}
-          </button>
+          <form onSubmit={handleSubmit(handleEmailSignup)}>
+            <button
+              type="submit"
+              className="w-full bg-green-500 text-white py-2 rounded-md"
+              disabled={loading}
+            >
+              {loading ? "Loading..." : "Criar uma conta"}
+            </button>
+          </form>
         </div>
       </div>
     </div>

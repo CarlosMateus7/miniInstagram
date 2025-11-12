@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { auth, db } from "../lib/firebase";
+import { auth } from "../lib/firebase";
 import {
   addDoc,
   collection,
@@ -51,6 +51,7 @@ export default function PostUploader() {
         caption,
         userId: uid,
         userName: displayName,
+        userAvatar: auth.currentUser?.photoURL || "/default-avatar.png",
         createdAt: serverTimestamp(),
         likes: [],
       });
