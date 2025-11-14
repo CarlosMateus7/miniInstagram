@@ -37,7 +37,11 @@ export default function DeleteModal({
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button
+            variant="outline"
+            onClick={onConfirm}
+            className="hover:bg-red-500"
+          >
             Excluir
           </Button>
         </div>

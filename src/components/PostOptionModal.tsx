@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogOverlay,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface PostActionModalProps {
   isOpen: boolean;
@@ -39,37 +34,34 @@ export default function PostActionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogOverlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1000]" />
-
       <DialogTitle />
-
       <DialogContent
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-             w-[40%] max-w-sm z-[1001] animate-fade-in [&>button]:hidden"
+        className="fixed 
+                   w-[40%] max-w-sm z-[1001] animate-fade-in p-0 [&>button]:hidden bg-gray-500"
       >
-        <div className="bg-gray-500 rounded-2xl overflow-visible">
+        <div className="bg-gray-500 rounded-2xl overflow-visible text-black">
           <div className="flex flex-col divide-y divide-gray-700/30">
             <button
               onClick={handleEdit}
-              className="block w-full h-16 text-center text-white hover:bg-white/10 cursor-pointer"
+              className="block w-full h-12 text-center hover:bg-white/10 cursor-pointer"
             >
               Editar
             </button>
             <button
               onClick={handleDelete}
-              className="block w-full h-16 text-center text-white hover:bg-white/10 cursor-pointer"
+              className="block w-full h-12 text-center hover:bg-white/10 cursor-pointer"
             >
               Apagar
             </button>
             <button
               onClick={handleCopyLink}
-              className="block w-full h-16 text-center text-white hover:bg-white/10 cursor-pointer"
+              className="block w-full h-12 text-center hover:bg-white/10 cursor-pointer"
             >
               Copiar ligação
             </button>
             <button
               onClick={onClose}
-              className="block w-full h-16 text-center text-white font-medium hover:bg-white/10 cursor-pointer"
+              className="block w-full h-12 text-center font-medium hover:bg-white/10 cursor-pointer"
             >
               Cancelar
             </button>

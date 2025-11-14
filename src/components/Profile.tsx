@@ -19,14 +19,19 @@ import {
   query,
   where,
   getDocs,
+  onSnapshot,
+  addDoc,
+  serverTimestamp,
+  deleteDoc,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { Post } from "../app/types/index";
+import { signOut, getAuth, onAuthStateChanged } from "firebase/auth";
+import { Post, Comment } from "../app/types/index";
+import PostModal from "./PostModal";
 
 const DEFAULT_PROFILE_IMAGE = "/default-profile.png";
 
@@ -40,7 +45,27 @@ export default function ProfilePage({ userId }: { userId: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [open, setOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComments, setNewComments] = useState<{ [postId: string]: string }>(
+    {}
+  );
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [currentUserName, setCurrentUserName] = useState<string>("");
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [currentPostIndex, setCurrentPostIndex] = useState<number>(0);
   const router = useRouter();
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUserId(user.uid);
+        setCurrentUserName(user.displayName || "Utilizador");
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -69,6 +94,54 @@ export default function ProfilePage({ userId }: { userId: string }) {
     fetchUserData();
     fetchPostsData();
   }, [userId]);
+
+  // Load Comments
+  useEffect(() => {
+    const q = query(collection(db, "comments"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allComments = snapshot.docs.map((doc) => {
+        const data = doc.data() as Omit<Comment, "id">;
+        return {
+          id: doc.id,
+          ...data,
+        };
+      });
+      setComments(allComments);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Sincronizar índice quando selectedPostId mudar
+  useEffect(() => {
+    if (selectedPostId) {
+      const postIndex = posts.findIndex((p) => p.id === selectedPostId);
+      if (postIndex !== -1) {
+        setCurrentPostIndex(postIndex);
+      }
+    }
+  }, [selectedPostId, posts]);
+
+  const handleCommentSubmit = async (postId: string) => {
+    const commentText = newComments[postId];
+    if (!commentText?.trim()) return;
+
+    try {
+      await addDoc(collection(db, "comments"), {
+        postId,
+        userId: currentUserId,
+        userName: currentUserName,
+        text: commentText,
+        userAvatar: auth.currentUser?.photoURL || "/default-avatar.png",
+        createdAt: serverTimestamp(),
+      });
+
+      setNewComments((prev) => ({ ...prev, [postId]: "" }));
+      // Comments will be updated automatically via onSnapshot
+    } catch (error) {
+      console.error("Erro ao adicionar comentário:", error);
+    }
+  };
 
   const handleUploadPhoto = async () => {
     if (!file) return;
@@ -119,7 +192,52 @@ export default function ProfilePage({ userId }: { userId: string }) {
     router.push("/login");
   };
 
-  console.log("posts", posts);
+  function openPostModal(post: Post) {
+    const postIndex = posts.findIndex((p) => p.id === post.id);
+    if (postIndex !== -1) {
+      setCurrentPostIndex(postIndex);
+      setSelectedPostId(post.id);
+    }
+  }
+
+  const handleNextPost = () => {
+    if (currentPostIndex < posts.length - 1) {
+      const nextIndex = currentPostIndex + 1;
+      setCurrentPostIndex(nextIndex);
+      setSelectedPostId(posts[nextIndex].id);
+    }
+  };
+
+  const handlePreviousPost = () => {
+    if (currentPostIndex > 0) {
+      const prevIndex = currentPostIndex - 1;
+      setCurrentPostIndex(prevIndex);
+      setSelectedPostId(posts[prevIndex].id);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await deleteDoc(doc(db, "posts", postId));
+      // Atualizar a lista de posts removendo o post deletado
+      const updatedPosts = posts.filter((p) => p.id !== postId);
+      setPosts(updatedPosts);
+      setPostCount(updatedPosts.length);
+
+      // Se o post deletado era o que estava aberto, fechar o modal
+      if (selectedPostId === postId) {
+        setSelectedPostId(null);
+      } else {
+        // Ajustar o índice se necessário
+        const deletedIndex = posts.findIndex((p) => p.id === postId);
+        if (deletedIndex !== -1 && deletedIndex < currentPostIndex) {
+          setCurrentPostIndex(currentPostIndex - 1);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao excluir post:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start px-4">
@@ -139,13 +257,16 @@ export default function ProfilePage({ userId }: { userId: string }) {
         <div className="flex flex-col items-center">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <div className="w-32 h-32 rounded-full overflow-hidden border shadow-md cursor-pointer">
+              <div className="relative w-32 h-32">
                 <Image
-                  src={userPhotoURL || DEFAULT_PROFILE_IMAGE}
+                  src={
+                    userPhotoURL ||
+                    auth.currentUser?.photoURL ||
+                    DEFAULT_PROFILE_IMAGE
+                  }
                   alt="Foto de perfil"
-                  width={128}
-                  height={128}
-                  className="object-cover w-full h-full"
+                  fill
+                  className="object-cover rounded-full"
                 />
               </div>
             </DialogTrigger>
@@ -244,8 +365,9 @@ export default function ProfilePage({ userId }: { userId: string }) {
           {posts.length > 0 ? (
             posts.map((post, index) => (
               <div
-                key={index}
-                className="bg-gray-200 rounded-lg overflow-hidden shadow-md min-w-[calc(100%/3-1rem)] max-w-[calc(100%/3-1rem)]"
+                key={post.id || index}
+                onClick={() => openPostModal(post)} // chama o modal ao clicar
+                className="bg-gray-200 rounded-lg overflow-hidden shadow-md min-w-[calc(100%/3-1rem)] max-w-[calc(100%/3-1rem)] cursor-pointer"
               >
                 <Image
                   src={post.imageUrl || "/default-post.png"}
@@ -261,6 +383,39 @@ export default function ProfilePage({ userId }: { userId: string }) {
           )}
         </div>
       </div>
+      {selectedPostId &&
+        (() => {
+          const currentPost = posts.find((p) => p.id === selectedPostId);
+          const currentPostComments = comments
+            .filter((comment) => comment.postId === selectedPostId)
+            .sort(
+              (a, b) =>
+                (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
+            );
+
+          if (!currentPost) return null;
+
+          const hasNext = currentPostIndex < posts.length - 1;
+          const hasPrevious = currentPostIndex > 0;
+
+          return (
+            <PostModal
+              currentUserId={currentUserId}
+              post={currentPost}
+              comments={currentPostComments}
+              isOpen={!!selectedPostId}
+              onClose={() => setSelectedPostId(null)}
+              newComments={newComments}
+              setNewComments={setNewComments}
+              handleCommentSubmit={handleCommentSubmit}
+              onNext={handleNextPost}
+              onPrevious={handlePreviousPost}
+              hasNext={hasNext}
+              hasPrevious={hasPrevious}
+              onDeletePost={handleDeletePost}
+            />
+          );
+        })()}
     </div>
   );
 }
