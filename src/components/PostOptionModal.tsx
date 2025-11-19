@@ -37,7 +37,7 @@ export default function PostActionModal({
       <DialogTitle />
       <DialogContent
         className="fixed 
-                   w-[40%] max-w-sm z-[1001] animate-fade-in p-0 [&>button]:hidden bg-gray-500"
+                   w-[40%] max-w-sm z-[99999] animate-fade-in p-0 [&>button]:hidden bg-gray-500"
       >
         <div className="bg-gray-500 rounded-2xl overflow-visible text-black">
           <div className="flex flex-col divide-y divide-gray-700/30">

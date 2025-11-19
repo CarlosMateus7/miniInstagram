@@ -132,7 +132,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
         userId: currentUserId,
         userName: currentUserName,
         text: commentText,
-        userAvatar: auth.currentUser?.photoURL || "/default-avatar.png",
+        userAvatar: userPhotoURL || "/default-avatar.png",
         createdAt: serverTimestamp(),
       });
 
@@ -216,6 +216,8 @@ export default function ProfilePage({ userId }: { userId: string }) {
     }
   };
 
+  const onClose = () => setOpen(false);
+
   const handleDeletePost = async (postId: string) => {
     try {
       await deleteDoc(doc(db, "posts", postId));
@@ -254,16 +256,12 @@ export default function ProfilePage({ userId }: { userId: string }) {
       </div>
       <div className="flex items-center justify-center gap-8 mb-8">
         {/* Profile Photo */}
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center cursor-pointer">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <div className="relative w-32 h-32">
                 <Image
-                  src={
-                    userPhotoURL ||
-                    auth.currentUser?.photoURL ||
-                    DEFAULT_PROFILE_IMAGE
-                  }
+                  src={userPhotoURL || DEFAULT_PROFILE_IMAGE}
                   alt="Foto de perfil"
                   fill
                   className="object-cover rounded-full"
@@ -280,9 +278,13 @@ export default function ProfilePage({ userId }: { userId: string }) {
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
               />
               <div className="flex gap-2 mt-4">
+                <Button variant="outline" onClick={onClose}>
+                  Cancelar
+                </Button>
                 <Button
                   onClick={handleUploadPhoto}
                   disabled={uploading || !file}
+                  variant="outline"
                 >
                   {uploading && (
                     <Loader2 className="animate-spin w-4 h-4 mr-2" />
@@ -332,7 +334,8 @@ export default function ProfilePage({ userId }: { userId: string }) {
             </Dialog>
           </h2>
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium">{postCount}</span> publicações
+            <span className="font-medium">{postCount}</span>{" "}
+            {postCount > 1 ? "publicações" : "publicação"}
           </p>
 
           {biography && (
@@ -344,7 +347,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
       </div>
 
       <div className="flex flex-col items-center py-10">
-        <Link href="/upload">
+        <Link href={`/upload/${currentUserId}`}>
           <Button
             variant="outline"
             className="rounded-full w-16 h-16 p-0 flex items-center justify-center"

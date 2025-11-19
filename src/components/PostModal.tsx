@@ -6,7 +6,7 @@ import PostActions from "./PostActions";
 import CommentInput from "./CommentInput";
 import PostOptionModal from "./PostOptionModal";
 import DeleteModal from "./DeleteModal";
-import { doc, deleteDoc } from "firebase/firestore";
+import { doc, deleteDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface PostModalProps {
@@ -42,6 +42,7 @@ export default function PostModal({
 }: PostModalProps) {
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [authorAvatar, setAuthorAvatar] = useState("/default-avatar.png");
 
   useEffect(() => {
     function handleEsc(event: KeyboardEvent) {
@@ -78,9 +79,25 @@ export default function PostModal({
 
   if (!isOpen) return null;
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    async function fetchAuthor() {
+      try {
+        const userDoc = await getDoc(doc(db, "users", post.userId));
+        if (userDoc.exists()) {
+          setAuthorAvatar(userDoc.data().photoURL || "/default-avatar.png");
+        }
+      } catch (err) {
+        console.error("Erro ao buscar avatar:", err);
+      }
+    }
+
+    fetchAuthor();
+  }, [post.userId]);
+
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 z-[99999] flex justify-center items-center"
+      className="fixed inset-0 bg-black bg-opacity-70 z-[99998] flex justify-center items-center"
       onClick={onClose}
     >
       <button
@@ -137,11 +154,11 @@ export default function PostModal({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <Image
-                src={post.userAvatar}
+                src={authorAvatar}
                 alt={post.userName}
                 width={40}
                 height={40}
-                className="rounded-full object-cover mr-3"
+                className="rounded-full object-cover h-10 mr-3"
               />
               <span className="font-medium">{post.userName}</span>
             </div>

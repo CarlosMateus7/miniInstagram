@@ -11,7 +11,6 @@ export interface Post {
   userName: string;
   likes: string[];
   createdAt: Timestamp;
-  userAvatar: string;
 }
 
 export interface Comment {

@@ -1130,7 +1130,7 @@
 
 "@shadcn/ui@^0.0.4":
   version "0.0.4"
-  resolved "https://registry.npmjs.org/@shadcn/ui/-/ui-0.0.4.tgz"
+  resolved "https://registry.yarnpkg.com/@shadcn/ui/-/ui-0.0.4.tgz#a0835202fa79073245bc2cb5f837bc514d96b4cb"
   integrity sha512-0dtu/5ApsOZ24qgaZwtif8jVwqol7a4m1x5AxPuM1k5wxhqU7t/qEfBGtaSki1R8VlbTQfCj5PAlO45NKCa7Gg==
   dependencies:
     chalk "5.2.0"

@@ -7,6 +7,8 @@ import {
   collection,
   serverTimestamp,
   getFirestore,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function PostUploader() {
+export default function PostUploader({ userId }: { userId: string }) {
   const [caption, setCaption] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -28,7 +30,7 @@ export default function PostUploader() {
     setLoading(true);
 
     try {
-      // 🔁 Upload to Cloudinary
+      // Upload ao Cloudinary
       const formData = new FormData();
       formData.append("file", imageFile);
       formData.append("upload_preset", "unsigned_preset");
@@ -42,24 +44,24 @@ export default function PostUploader() {
 
       const data = await res.json();
       const imageUrl = data.secure_url;
-      const user = auth.currentUser;
-      const { displayName, uid } = user;
 
-      // Save post on Firestore
+      // Valores do Firestore (NÃO do Google)
+      const userDoc = await getDoc(doc(db, "users", userId));
+      const userData = userDoc.exists() ? userDoc.data() : {};
+
+      const postUserName = userData.userName || "Utilizador";
+
       await addDoc(collection(db, "posts"), {
         imageUrl,
         caption,
-        userId: uid,
-        userName: displayName,
-        userAvatar: auth.currentUser?.photoURL || "/default-avatar.png",
+        userId: userId,
+        userName: postUserName,
         createdAt: serverTimestamp(),
         likes: [],
       });
 
-      // Clean the fields
       setCaption("");
       setImageFile(null);
-
       router.push("/feed");
     } catch (err) {
       console.error("Erro ao fazer upload:", err);

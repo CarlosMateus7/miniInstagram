@@ -4,7 +4,6 @@
 import Image from "next/image";
 import { MoreHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
 import { Comment, Post } from "@/app/types";
 import PostActions from "./PostActions";
 import CommentInput from "./CommentInput";
@@ -12,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface PostCardProps {
   post: Post;
+  userAvatar: string;
   currentUserId: string;
   postComments: Comment[];
   newComments: Record<string, string>;
@@ -24,6 +24,7 @@ interface PostCardProps {
 
 export default function PostCard({
   post,
+  userAvatar,
   currentUserId,
   postComments,
   newComments,
@@ -45,11 +46,11 @@ export default function PostCard({
             className="flex items-center gap-[10px] cursor-pointer hover:opacity-80"
           >
             <Image
-              src={auth.currentUser?.photoURL || "/default-avatar.png"}
+              src={userAvatar || "/default-avatar.png"}
               alt="Avatar"
               width={40}
               height={40}
-              className="rounded-full object-cover"
+              className="rounded-full object-cover h-10"
             />
             <span className="text-sm font-medium">
               {post.userName ?? post.userId}

@@ -52,7 +52,7 @@ export default function CommentSection({ postId }: { postId: string }) {
       text,
       userId: user.uid,
       displayName: user.displayName || "Anônimo",
-      userAvatar: auth.currentUser?.photoURL || "/default-avatar.png",
+      userAvatar: user.photoURL || "/default-avatar.png",
       createdAt: serverTimestamp(),
     });
 

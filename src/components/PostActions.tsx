@@ -5,6 +5,7 @@ import { Heart, MessageCircle } from "lucide-react";
 import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Post } from "@/app/types";
+import { useRouter } from "next/navigation";
 
 interface PostActionsProps {
   post: Post;
@@ -18,6 +19,7 @@ export default function PostActions({
   openModal,
 }: PostActionsProps) {
   const liked = post.likes?.includes(currentUserId);
+  const router = useRouter();
 
   const handleLikeToggle = async (
     postId: string,
@@ -52,7 +54,10 @@ export default function PostActions({
         </button>
 
         <button
-          onClick={() => openModal?.(post)}
+          onClick={() => {
+            openModal?.(post);
+            router.push(`/feed/postId/${post.id}`, { scroll: false });
+          }}
           className="p-0 m-0 border-none bg-transparent hover:opacity-80 transition"
           style={{ appearance: "none" }}
           aria-label="Comentários"

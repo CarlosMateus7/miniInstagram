@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import {
   onSnapshot,
-  collection,
-  query,
   orderBy,
-  doc,
   addDoc,
   serverTimestamp,
-  deleteDoc,
   getDoc,
+  doc,
+  collection,
+  query,
+  where,
+  getDocs,
+  writeBatch,
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Image from "next/image";
@@ -18,7 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import PostModal from "./PostModal";
 import { Comment, Post } from "@/app/types";
 import DeleteModal from "./DeleteModal";
@@ -44,19 +46,6 @@ export default function Feed() {
   const [userAvatar, setUserAvatar] = useState<string>("/default-avatar.png");
   const router = useRouter();
 
-  // useEffect(() => {
-  //   const auth = getAuth();
-  //   const unsubscribe = onAuthStateChanged(auth, (user) => {
-  //     if (user) {
-  //       setCurrentUserId(user.uid);
-  //       setUserName(user.displayName || "Utilizador");
-  //       setUserAvatar(user.photoURL || "/default-avatar.png");
-  //     }
-  //   });
-
-  //   return () => unsubscribe();
-  // }, []);
-
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -70,11 +59,11 @@ export default function Feed() {
           const data = userDoc.data();
 
           setUserName(data.userName || "Utilizador");
-          setUserAvatar(data.photoURL || "/default-avatar.png");
+          setUserAvatar(data.photoURL);
         } else {
           // fallback caso o user ainda não exista na coleção
           setUserName(user.displayName || "Utilizador");
-          setUserAvatar(user.photoURL || "/default-avatar.png");
+          setUserAvatar(user.photoURL || "");
         }
       }
     });
@@ -132,7 +121,7 @@ export default function Feed() {
         userId: currentUserId,
         userName,
         text: commentText,
-        userAvatar: auth.currentUser?.photoURL || "/default-avatar.png",
+        userAvatar: userAvatar,
         createdAt: serverTimestamp(),
       });
 
@@ -145,12 +134,29 @@ export default function Feed() {
 
   const handleDeletePost = async () => {
     if (!selectedPostIdForOptions) return;
+
     try {
-      await deleteDoc(doc(db, "posts", selectedPostIdForOptions));
+      const postId = selectedPostIdForOptions;
+      const batch = writeBatch(db);
+
+      const commentsQuery = query(
+        collection(db, "comments"),
+        where("postId", "==", postId)
+      );
+      const commentsSnapshot = await getDocs(commentsQuery);
+
+      commentsSnapshot.forEach((commentDoc) => {
+        batch.delete(doc(db, "comments", commentDoc.id));
+      });
+
+      batch.delete(doc(db, "posts", postId));
+
+      await batch.commit();
+
       setShowDeleteModal(false);
       setSelectedPostIdForOptions(null);
     } catch (error) {
-      console.error("Erro ao excluir post:", error);
+      console.error("Erro ao excluir post e comentários:", error);
     }
   };
 
@@ -200,6 +206,7 @@ export default function Feed() {
                   <PostCard
                     key={post.id}
                     post={post}
+                    userAvatar={userAvatar}
                     currentUserId={currentUserId}
                     postComments={postComments}
                     newComments={newComments}
@@ -225,7 +232,7 @@ export default function Feed() {
                   alt="Avatar"
                   width={40}
                   height={40}
-                  className="rounded-full object-cover"
+                  className="object-cover rounded-full h-10"
                 />
               </div>
               <span className="text-sm font-medium">
