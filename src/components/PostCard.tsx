@@ -74,14 +74,8 @@ export default function PostCard({
         </div>
 
         {/* Photo */}
-        <div className="relative w-full h-[400px] rounded-2xl overflow-hidden">
-          <Image
-            src={post.imageUrl}
-            alt="Post"
-            fill
-            className="object-cover !rounded-2xl"
-            style={{ borderRadius: "6px" }}
-          />
+        <div className="relative w-full aspect-square rounded-2xl overflow-hidden">
+          <Image src={post.imageUrl} alt="Post" fill className="object-cover" />
         </div>
 
         <div className="flex flex-col pl-[12px] pr-[12px]">
@@ -93,21 +87,23 @@ export default function PostCard({
           />
 
           {/* Caption */}
-          <p className="text-sm text-gray-700 mt-[8px] mb-[8px]">
-            <strong
-              onClick={() => router.push(`/profile/${currentUserId}`)}
-              className="cursor-pointer"
-            >
-              {post.userName ?? post.userId}
-            </strong>{" "}
-            {post.caption}
-          </p>
+          {post.caption && (
+            <p className="text-sm text-gray-700 mt-[8px] mb-[8px]">
+              <strong
+                onClick={() => router.push(`/profile/${currentUserId}`)}
+                className="cursor-pointer"
+              >
+                {post.userName ?? post.userId}
+              </strong>{" "}
+              {post.caption}
+            </p>
+          )}
 
           {/* Ver comentários */}
           {postComments.length > 0 && openModal && (
             <button
               onClick={() => openModal(post)}
-              className="text-xs text-gray-500 hover:text-blue-600 mb-2 text-left bg-transparent border-none p-0 m-0 cursor-pointer"
+              className="text-xs text-gray-500 hover:font-semibold mb-2 text-left bg-transparent border-none p-0 m-0 cursor-pointer"
               style={{ appearance: "none" }}
             >
               {postComments.length === 1

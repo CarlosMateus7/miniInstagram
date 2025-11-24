@@ -36,6 +36,7 @@ export default function PostActionModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogTitle />
       <DialogContent
+        aria-describedby={undefined}
         className="fixed 
                    w-[40%] max-w-sm z-[99999] animate-fade-in p-0 [&>button]:hidden bg-gray-500"
       >

@@ -264,6 +264,7 @@ export default function Feed() {
         />
       )}
 
+      {/* open when click on comment*/}
       {isModalOpen &&
         selectedPostId &&
         (() => {

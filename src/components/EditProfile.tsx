@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea";
 
-const DEFAULT_PROFILE_IMAGE = "/default-profile.png";
+const DEFAULT_PROFILE_IMAGE = "/default-avatar.png";
 
 export default function EditProfilePage({ userId }: { userId: string }) {
   const [userName, setUserName] = useState("");
@@ -103,9 +103,19 @@ export default function EditProfilePage({ userId }: { userId: string }) {
         placeholder="Fala um pouco sobre ti..."
       />
 
-      <Button onClick={handleSave} disabled={loading} className="w-full">
+      <Button onClick={handleSave} disabled={loading} className="w-full mb-4">
         {loading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
         Guardar alterações
+      </Button>
+
+      <Button
+        variant="outline"
+        onClick={() => router.back()}
+        disabled={loading}
+        className="w-full"
+      >
+        {loading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
+        Cancelar
       </Button>
     </div>
   );

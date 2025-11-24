@@ -24,6 +24,8 @@ export default function PostUploader({ userId }: { userId: string }) {
   const router = useRouter();
   const db = getFirestore();
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   const handleUpload = async () => {
     if (!imageFile || !auth.currentUser) return;
 
@@ -78,16 +80,40 @@ export default function PostUploader({ userId }: { userId: string }) {
         <Input
           type="file"
           accept="image/*"
+          className="cursor-pointer"
           onChange={(e) => {
-            if (e.target.files?.[0]) setImageFile(e.target.files[0]);
+            const file = e.target.files?.[0];
+            if (file) {
+              setImageFile(file);
+              setPreviewUrl(URL.createObjectURL(file));
+            }
           }}
         />
+
+        {previewUrl && (
+          <div className="w-full mt-4">
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="w-full max-h-96 object-cover rounded-lg shadow"
+            />
+          </div>
+        )}
 
         <Textarea
           placeholder="Legenda"
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
         />
+
+        <Button
+          variant="outline"
+          onClick={() => router.back()}
+          disabled={loading}
+          className="mr-4"
+        >
+          Cancelar
+        </Button>
 
         <Button onClick={handleUpload} disabled={loading || !imageFile}>
           {loading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}

@@ -23,6 +23,7 @@ import {
   addDoc,
   serverTimestamp,
   deleteDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -33,7 +34,19 @@ import { signOut, getAuth, onAuthStateChanged } from "firebase/auth";
 import { Post, Comment } from "../app/types/index";
 import PostModal from "./PostModal";
 
-const DEFAULT_PROFILE_IMAGE = "/default-profile.png";
+const DEFAULT_PROFILE_IMAGE = "/default-avatar.png";
+
+// Função para lidar com Timestamp ou Date
+function getDateFromFirestore(
+  value?: Timestamp | Date | string | number
+): Date {
+  if (!value) return new Date(0);
+  if (value instanceof Date) return value;
+  if (typeof value === "object" && value !== null && "toDate" in value) {
+    return (value as Timestamp).toDate();
+  }
+  return new Date(value);
+}
 
 export default function ProfilePage({ userId }: { userId: string }) {
   const [userPhotoURL, setUserPhotoURL] = useState<string | null>(null);
@@ -55,6 +68,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
   const [currentPostIndex, setCurrentPostIndex] = useState<number>(0);
   const router = useRouter();
 
+  // Obter usuário logado
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -63,10 +77,10 @@ export default function ProfilePage({ userId }: { userId: string }) {
         setCurrentUserName(user.displayName || "Utilizador");
       }
     });
-
     return () => unsubscribe();
   }, []);
 
+  // Buscar dados do usuário e posts
   useEffect(() => {
     const fetchUserData = async () => {
       const userDoc = await getDoc(doc(db, "users", userId));
@@ -81,12 +95,10 @@ export default function ProfilePage({ userId }: { userId: string }) {
     const fetchPostsData = async () => {
       const q = query(collection(db, "posts"), where("userId", "==", userId));
       const snapshot = await getDocs(q);
-
       const postsData: Post[] = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as Post[];
-
       setPosts(postsData);
       setPostCount(postsData.length);
     };
@@ -95,32 +107,54 @@ export default function ProfilePage({ userId }: { userId: string }) {
     fetchPostsData();
   }, [userId]);
 
-  // Load Comments
+  // Load comments
   useEffect(() => {
     const q = query(collection(db, "comments"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allComments = snapshot.docs.map((doc) => {
-        const data = doc.data() as Omit<Comment, "id">;
-        return {
-          id: doc.id,
-          ...data,
-        };
-      });
+      const allComments = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Comment, "id">),
+      }));
       setComments(allComments);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // Sincronizar índice quando selectedPostId mudar
+  // Atualizar índice do post selecionado
   useEffect(() => {
     if (selectedPostId) {
-      const postIndex = posts.findIndex((p) => p.id === selectedPostId);
-      if (postIndex !== -1) {
-        setCurrentPostIndex(postIndex);
-      }
+      const postIndex = sortedPosts.findIndex((p) => p.id === selectedPostId);
+      if (postIndex !== -1) setCurrentPostIndex(postIndex);
     }
   }, [selectedPostId, posts]);
+
+  // Lista de posts ordenada por data (mais recente primeiro)
+  const sortedPosts = [...posts].sort(
+    (a, b) =>
+      getDateFromFirestore(b.createdAt).getTime() -
+      getDateFromFirestore(a.createdAt).getTime()
+  );
+
+  const openPostModal = (post: Post) => {
+    const postIndex = sortedPosts.findIndex((p) => p.id === post.id);
+    if (postIndex !== -1) {
+      setCurrentPostIndex(postIndex);
+      setSelectedPostId(post.id);
+    }
+  };
+
+  const hasNext = currentPostIndex < sortedPosts.length - 1;
+  const hasPrevious = currentPostIndex > 0;
+
+  const handleNextPost = () => {
+    if (!hasNext) return;
+    setSelectedPostId(sortedPosts[currentPostIndex + 1].id);
+  };
+
+  const handlePreviousPost = () => {
+    if (!hasPrevious) return;
+    setSelectedPostId(sortedPosts[currentPostIndex - 1].id);
+  };
 
   const handleCommentSubmit = async (postId: string) => {
     const commentText = newComments[postId];
@@ -132,12 +166,10 @@ export default function ProfilePage({ userId }: { userId: string }) {
         userId: currentUserId,
         userName: currentUserName,
         text: commentText,
-        userAvatar: userPhotoURL || "/default-avatar.png",
+        userAvatar: userPhotoURL || DEFAULT_PROFILE_IMAGE,
         createdAt: serverTimestamp(),
       });
-
       setNewComments((prev) => ({ ...prev, [postId]: "" }));
-      // Comments will be updated automatically via onSnapshot
     } catch (error) {
       console.error("Erro ao adicionar comentário:", error);
     }
@@ -145,9 +177,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
 
   const handleUploadPhoto = async () => {
     if (!file) return;
-
     setUploading(true);
-
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -155,20 +185,13 @@ export default function ProfilePage({ userId }: { userId: string }) {
 
       const res = await fetch(
         "https://api.cloudinary.com/v1_1/dgapgiwov/image/upload",
-        {
-          method: "POST",
-          body: formData,
-        }
+        { method: "POST", body: formData }
       );
 
       const data = await res.json();
-
       if (!data.secure_url) throw new Error("Upload failed");
 
-      await updateDoc(doc(db, "users", userId), {
-        photoURL: data.secure_url,
-      });
-
+      await updateDoc(doc(db, "users", userId), { photoURL: data.secure_url });
       setUserPhotoURL(data.secure_url);
       setFile(null);
       setOpen(false);
@@ -180,9 +203,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
   };
 
   const handleRemovePhoto = async () => {
-    await updateDoc(doc(db, "users", userId), {
-      photoURL: null,
-    });
+    await updateDoc(doc(db, "users", userId), { photoURL: null });
     setUserPhotoURL(null);
     setOpen(false);
   };
@@ -192,57 +213,25 @@ export default function ProfilePage({ userId }: { userId: string }) {
     router.push("/login");
   };
 
-  function openPostModal(post: Post) {
-    const postIndex = posts.findIndex((p) => p.id === post.id);
-    if (postIndex !== -1) {
-      setCurrentPostIndex(postIndex);
-      setSelectedPostId(post.id);
-    }
-  }
-
-  const handleNextPost = () => {
-    if (currentPostIndex < posts.length - 1) {
-      const nextIndex = currentPostIndex + 1;
-      setCurrentPostIndex(nextIndex);
-      setSelectedPostId(posts[nextIndex].id);
-    }
-  };
-
-  const handlePreviousPost = () => {
-    if (currentPostIndex > 0) {
-      const prevIndex = currentPostIndex - 1;
-      setCurrentPostIndex(prevIndex);
-      setSelectedPostId(posts[prevIndex].id);
-    }
-  };
-
-  const onClose = () => setOpen(false);
-
   const handleDeletePost = async (postId: string) => {
     try {
       await deleteDoc(doc(db, "posts", postId));
-      // Atualizar a lista de posts removendo o post deletado
       const updatedPosts = posts.filter((p) => p.id !== postId);
       setPosts(updatedPosts);
       setPostCount(updatedPosts.length);
-
-      // Se o post deletado era o que estava aberto, fechar o modal
-      if (selectedPostId === postId) {
-        setSelectedPostId(null);
-      } else {
-        // Ajustar o índice se necessário
-        const deletedIndex = posts.findIndex((p) => p.id === postId);
-        if (deletedIndex !== -1 && deletedIndex < currentPostIndex) {
-          setCurrentPostIndex(currentPostIndex - 1);
-        }
-      }
+      if (selectedPostId === postId) setSelectedPostId(null);
+      else if (posts.findIndex((p) => p.id === postId) < currentPostIndex)
+        setCurrentPostIndex(currentPostIndex - 1);
     } catch (error) {
       console.error("Erro ao excluir post:", error);
     }
   };
 
+  const onClose = () => setOpen(false);
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-start px-4">
+      {/* Header */}
       <div className="w-full flex items-center justify-start px-4 py-4">
         <Link href="/feed">
           <Image
@@ -254,8 +243,9 @@ export default function ProfilePage({ userId }: { userId: string }) {
           />
         </Link>
       </div>
-      <div className="flex items-center justify-center gap-8 mb-8">
-        {/* Profile Photo */}
+
+      {/* Profile Info */}
+      <div className="flex items-center justify-center gap-8">
         <div className="flex flex-col items-center cursor-pointer">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -268,7 +258,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
                 />
               </div>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent aria-describedby={undefined}>
               <DialogHeader>
                 <DialogTitle>Editar Fotografia</DialogTitle>
               </DialogHeader>
@@ -299,11 +289,9 @@ export default function ProfilePage({ userId }: { userId: string }) {
           </Dialog>
         </div>
 
-        {/* User info */}
         <div className="text-left space-y-2">
           <h2 className="text-2xl font-semibold flex items-center gap-4">
             {userName}
-
             <Button
               variant="secondary"
               onClick={() => router.push(`/edit-profile/${userId}`)}
@@ -318,7 +306,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
                 </Button>
               </DialogTrigger>
 
-              <DialogContent>
+              <DialogContent aria-describedby={undefined}>
                 <DialogHeader>
                   <DialogTitle>Definições</DialogTitle>
                 </DialogHeader>
@@ -330,9 +318,17 @@ export default function ProfilePage({ userId }: { userId: string }) {
                   <LogOut className="w-4 h-4 mr-2" />
                   Terminar Sessão
                 </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setLogoutDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
               </DialogContent>
             </Dialog>
           </h2>
+
           <p className="text-sm text-muted-foreground">
             <span className="font-medium">{postCount}</span>{" "}
             {postCount > 1 ? "publicações" : "publicação"}
@@ -346,6 +342,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
         </div>
       </div>
 
+      {/* Upload novo post */}
       <div className="flex flex-col items-center py-10">
         <Link href={`/upload/${currentUserId}`}>
           <Button
@@ -363,62 +360,54 @@ export default function ProfilePage({ userId }: { userId: string }) {
       <h3 className="text-xl font-semibold">Publicações</h3>
 
       {/* Post Grid */}
-      <div className="w-full overflow-x-auto mt-8">
-        <div className="flex gap-[4px] min-w-max">
-          {posts.length > 0 ? (
-            posts.map((post, index) => (
+      <div className="w-full mt-8">
+        <div className="grid grid-cols-3 gap-2">
+          {sortedPosts.length > 0 ? (
+            sortedPosts.map((post, index) => (
               <div
-                key={post.id || index}
-                onClick={() => openPostModal(post)} // chama o modal ao clicar
-                className="bg-gray-200 rounded-lg overflow-hidden shadow-md min-w-[calc(100%/3-1rem)] max-w-[calc(100%/3-1rem)] cursor-pointer"
+                key={post.id}
+                onClick={() => openPostModal(post)}
+                className="bg-gray-200 rounded-lg overflow-hidden shadow-md w-full aspect-square relative cursor-pointer"
               >
                 <Image
                   src={post.imageUrl || "/default-post.png"}
                   alt={`Post ${index + 1}`}
-                  width={400}
-                  height={300}
-                  className="object-cover w-full h-full"
+                  fill
+                  className="object-cover"
                 />
               </div>
             ))
           ) : (
-            <p className="text-gray-500">Nenhum post encontrado.</p>
+            <p className="text-gray-500 col-span-3 text-center">
+              Não existem Posts
+            </p>
           )}
         </div>
       </div>
-      {selectedPostId &&
-        (() => {
-          const currentPost = posts.find((p) => p.id === selectedPostId);
-          const currentPostComments = comments
-            .filter((comment) => comment.postId === selectedPostId)
+
+      {/* Post Modal */}
+      {selectedPostId && (
+        <PostModal
+          currentUserId={currentUserId}
+          post={sortedPosts[currentPostIndex]}
+          comments={comments
+            .filter((c) => c.postId === selectedPostId)
             .sort(
               (a, b) =>
                 (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
-            );
-
-          if (!currentPost) return null;
-
-          const hasNext = currentPostIndex < posts.length - 1;
-          const hasPrevious = currentPostIndex > 0;
-
-          return (
-            <PostModal
-              currentUserId={currentUserId}
-              post={currentPost}
-              comments={currentPostComments}
-              isOpen={!!selectedPostId}
-              onClose={() => setSelectedPostId(null)}
-              newComments={newComments}
-              setNewComments={setNewComments}
-              handleCommentSubmit={handleCommentSubmit}
-              onNext={handleNextPost}
-              onPrevious={handlePreviousPost}
-              hasNext={hasNext}
-              hasPrevious={hasPrevious}
-              onDeletePost={handleDeletePost}
-            />
-          );
-        })()}
+            )}
+          isOpen={!!selectedPostId}
+          onClose={() => setSelectedPostId(null)}
+          newComments={newComments}
+          setNewComments={setNewComments}
+          handleCommentSubmit={handleCommentSubmit}
+          onNext={handleNextPost}
+          onPrevious={handlePreviousPost}
+          hasNext={hasNext}
+          hasPrevious={hasPrevious}
+          onDeletePost={handleDeletePost}
+        />
+      )}
     </div>
   );
 }

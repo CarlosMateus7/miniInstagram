@@ -15,7 +15,6 @@ export default function UploadPageClient() {
 
   return (
     <div>
-      <h1>Upload de Post</h1>
       <PostUploader userId={id} />
     </div>
   );

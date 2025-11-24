@@ -1,7 +1,4 @@
-export interface Timestamp {
-  nanoseconds: number;
-  seconds: number;
-}
+import { Timestamp } from "firebase/firestore";
 
 export interface Post {
   id: string;

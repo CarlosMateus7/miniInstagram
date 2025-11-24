@@ -6,7 +6,7 @@ import PostActions from "./PostActions";
 import CommentInput from "./CommentInput";
 import PostOptionModal from "./PostOptionModal";
 import DeleteModal from "./DeleteModal";
-import { doc, deleteDoc, getDoc } from "firebase/firestore";
+import { doc, deleteDoc, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface PostModalProps {
@@ -95,6 +95,26 @@ export default function PostModal({
     fetchAuthor();
   }, [post.userId]);
 
+  function getDateFromFirestore(
+    value: Timestamp | Date | string | number
+  ): Date {
+    if (value instanceof Timestamp) {
+      return value.toDate();
+    } else if (value instanceof Date) {
+      return value;
+    } else {
+      return new Date(value);
+    }
+  }
+
+  const postDate = getDateFromFirestore(post.createdAt);
+
+  const formattedDate = postDate.toLocaleDateString("pt-PT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-70 z-[99998] flex justify-center items-center"
@@ -175,21 +195,26 @@ export default function PostModal({
               </button>
             )}
           </div>
+
+          {post.caption && (
+            <>
+              <hr className="my-2 border-gray-300" />
+              {/* Descrição do post */}
+              <p className="text-sm text-gray-700 mb-4">
+                <strong>{post.userName}</strong>: {post.caption}
+              </p>
+            </>
+          )}
+
           <hr className="my-2 border-gray-300" />
-
-          {/* Descrição do post */}
-          <p className="text-sm text-gray-700 mb-4">
-            <strong>{post.userName}</strong>: {post.caption}
-          </p>
-          <PostActions post={post} currentUserId={currentUserId} />
-
-          <hr className="my-2 border-gray-300" />
-
           {/* Comentários */}
           <div className="flex-grow overflow-y-auto pr-1 mb-4">
             {comments.length > 0 ? (
-              comments.map((comment) => (
-                <div key={comment.id} className="mb-2 text-sm">
+              comments.map((comment, index) => (
+                <div
+                  key={comment.id ?? `comment-${index}`}
+                  className="mb-2 text-sm"
+                >
                   <strong>{comment.userName}:</strong> {comment.text}
                 </div>
               ))
@@ -197,6 +222,16 @@ export default function PostModal({
               <p className="text-sm text-gray-500">Sem comentários</p>
             )}
           </div>
+
+          <PostActions
+            post={post}
+            currentUserId={currentUserId}
+            openModal={() => {}}
+          />
+
+          <p className="text-[12px] text-gray-500 italic mt-1 mb-3">
+            {formattedDate}
+          </p>
 
           {/* Campo de novo comentário */}
           <CommentInput

@@ -18,7 +18,9 @@ export default function PostActions({
   currentUserId,
   openModal,
 }: PostActionsProps) {
-  const liked = post.likes?.includes(currentUserId);
+  //   const liked = post.likes?.includes(currentUserId);
+  const likes = Array.isArray(post.likes) ? post.likes : [];
+  const liked = likes.includes(currentUserId);
   const router = useRouter();
 
   const handleLikeToggle = async (
@@ -35,12 +37,23 @@ export default function PostActions({
     }
   };
 
+  const handleCommentsClick = () => {
+    if (!post?.id) return;
+    if (openModal) {
+      openModal(post); // apenas abre modal se for para abrir
+    } else {
+      router.push(`/feed/postId/${post.id}`, { scroll: false });
+    }
+  };
+
   return (
     <div className="flex flex-col items-start gap-y-1 mt-[4px] mb-[4px]">
       {/* Heart + MessageCircle lado a lado */}
       <div className="flex items-center gap-x-2">
         <button
-          onClick={() => handleLikeToggle(post.id, liked)}
+          onClick={() => {
+            handleLikeToggle(post.id, liked);
+          }}
           className="p-0 m-0 border-none bg-transparent transition-transform duration-200 hover:scale-110 cursor-pointer"
           style={{ appearance: "none" }}
           aria-label="Gostar"
@@ -54,10 +67,7 @@ export default function PostActions({
         </button>
 
         <button
-          onClick={() => {
-            openModal?.(post);
-            router.push(`/feed/postId/${post.id}`, { scroll: false });
-          }}
+          onClick={handleCommentsClick}
           className="p-0 m-0 border-none bg-transparent hover:opacity-80 transition"
           style={{ appearance: "none" }}
           aria-label="Comentários"

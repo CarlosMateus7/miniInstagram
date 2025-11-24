@@ -26,7 +26,10 @@ export default function DeleteModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogTitle></DialogTitle>
       <DialogOverlay className="fixed inset-0 bg-black/50 z-[99998]" />
-      <DialogContent className="max-w-sm  p-6 w-[40%] rounded-md shadow-lg bg-white space-y-4 z-[99999] [&>button]:hidden">
+      <DialogContent
+        aria-describedby={undefined}
+        className="max-w-sm  p-6 w-[40%] rounded-md shadow-lg bg-white space-y-4 z-[99999] [&>button]:hidden"
+      >
         <DialogHeader>
           <DialogTitle>Excluir Post</DialogTitle>
           <DialogDescription>
