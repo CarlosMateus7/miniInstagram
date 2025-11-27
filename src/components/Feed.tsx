@@ -169,6 +169,8 @@ export default function Feed() {
               <Image
                 src="/mini-instagram-logo.png"
                 alt="Mini Instagram"
+                sizes="100vw"
+                priority
                 width={90}
                 height={90}
                 className="cursor-pointer"
@@ -230,6 +232,7 @@ export default function Feed() {
                 <Image
                   src={userAvatar || "/default-avatar.png"}
                   alt="Avatar"
+                  priority
                   width={40}
                   height={40}
                   className="object-cover rounded-full h-10"
@@ -287,7 +290,6 @@ export default function Feed() {
               onClose={() => setIsModalOpen(false)}
               newComments={newComments}
               setNewComments={setNewComments}
-              handleCommentSubmit={handleCommentSubmit}
             />
           );
         })()}

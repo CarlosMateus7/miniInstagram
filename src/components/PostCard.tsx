@@ -75,16 +75,19 @@ export default function PostCard({
 
         {/* Photo */}
         <div className="relative w-full aspect-square rounded-2xl overflow-hidden">
-          <Image src={post.imageUrl} alt="Post" fill className="object-cover" />
+          <Image
+            src={post.imageUrl}
+            alt="Post"
+            fill
+            sizes="(max-width: 768px) 100vw, 600px"
+            priority
+            className="object-cover"
+          />
         </div>
 
         <div className="flex flex-col pl-[12px] pr-[12px]">
           {/* Likes + Comentários */}
-          <PostActions
-            post={post}
-            currentUserId={currentUserId}
-            openModal={openModal}
-          />
+          <PostActions post={post} currentUserId={currentUserId} />
 
           {/* Caption */}
           {post.caption && (
@@ -102,7 +105,9 @@ export default function PostCard({
           {/* Ver comentários */}
           {postComments.length > 0 && openModal && (
             <button
-              onClick={() => openModal(post)}
+              onClick={() =>
+                router.push(`/feed/postId/${post.id}`, { scroll: false })
+              }
               className="text-xs text-gray-500 hover:font-semibold mb-2 text-left bg-transparent border-none p-0 m-0 cursor-pointer"
               style={{ appearance: "none" }}
             >

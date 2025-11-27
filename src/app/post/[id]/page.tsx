@@ -19,7 +19,8 @@ export default async function PostPage({ params }: { params: { id: string } }) {
     return <div className="text-center mt-10">Post não encontrado.</div>;
   }
 
-  // GARANTE QUE O OBJETO TEM TODAS AS PROPS DO TIPO Post
+  console.log("entra aqui===");
+
   const postData = postSnap.data();
 
   const post: Post = {

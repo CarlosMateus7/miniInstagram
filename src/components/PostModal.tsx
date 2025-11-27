@@ -6,18 +6,24 @@ import PostActions from "./PostActions";
 import CommentInput from "./CommentInput";
 import PostOptionModal from "./PostOptionModal";
 import DeleteModal from "./DeleteModal";
-import { doc, deleteDoc, getDoc, Timestamp } from "firebase/firestore";
+import {
+  doc,
+  deleteDoc,
+  getDoc,
+  Timestamp,
+  collection,
+  setDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface PostModalProps {
   post: Post;
   comments: Comment[];
-  currentUserId: string;
+  currentUserId: string | null;
   isOpen: boolean;
   onClose: () => void;
   newComments: Record<string, string>;
   setNewComments: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  handleCommentSubmit: (postId: string) => void;
   onNext?: () => void;
   onPrevious?: () => void;
   hasNext?: boolean;
@@ -33,7 +39,6 @@ export default function PostModal({
   onClose,
   newComments,
   setNewComments,
-  handleCommentSubmit,
   onNext,
   onPrevious,
   hasNext = false,
@@ -43,6 +48,41 @@ export default function PostModal({
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [authorAvatar, setAuthorAvatar] = useState("/default-avatar.png");
+  const [localComments, setLocalComments] = useState<Comment[]>(comments);
+  const [localPost, setLocalPost] = useState<Post>(post);
+
+  useEffect(() => {
+    setLocalPost(post);
+    setLocalComments(comments);
+  }, [post, comments]);
+
+  const handleCommentSubmit = async (postId: string) => {
+    const text = newComments[postId];
+    if (!text || !currentUserId) return;
+
+    try {
+      const commentRef = doc(collection(db, "comments"));
+      const newComment = {
+        id: commentRef.id,
+        postId,
+        userId: currentUserId,
+        userName: post.userName,
+        text,
+        createdAt: Timestamp.fromDate(new Date()),
+      };
+
+      await setDoc(commentRef, newComment);
+
+      setLocalComments((prev) => [...prev, newComment]);
+
+      setNewComments((prev) => ({
+        ...prev,
+        [postId]: "",
+      }));
+    } catch (err) {
+      console.error("Erro ao enviar comentário:", err);
+    }
+  };
 
   useEffect(() => {
     function handleEsc(event: KeyboardEvent) {
@@ -163,6 +203,7 @@ export default function PostModal({
             src={post.imageUrl}
             alt="Post"
             fill
+            sizes="(max-width: 768px) 100vw, 600px"
             className="object-contain"
             priority
           />
@@ -209,8 +250,8 @@ export default function PostModal({
           <hr className="my-2 border-gray-300" />
           {/* Comentários */}
           <div className="flex-grow overflow-y-auto pr-1 mb-4">
-            {comments.length > 0 ? (
-              comments.map((comment, index) => (
+            {localComments.length > 0 ? (
+              localComments.map((comment, index) => (
                 <div
                   key={comment.id ?? `comment-${index}`}
                   className="mb-2 text-sm"
@@ -224,9 +265,11 @@ export default function PostModal({
           </div>
 
           <PostActions
-            post={post}
+            post={localPost}
             currentUserId={currentUserId}
-            openModal={() => {}}
+            onLikeToggle={(updatedLikes) => {
+              setLocalPost((prev) => ({ ...prev, likes: updatedLikes }));
+            }}
           />
 
           <p className="text-[12px] text-gray-500 italic mt-1 mb-3">
@@ -243,7 +286,7 @@ export default function PostModal({
                 [post.id]: text,
               }))
             }
-            onSubmit={handleCommentSubmit}
+            onSubmit={() => handleCommentSubmit(post.id)}
           />
         </div>
       </div>

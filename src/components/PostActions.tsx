@@ -9,25 +9,28 @@ import { useRouter } from "next/navigation";
 
 interface PostActionsProps {
   post: Post;
-  currentUserId: string;
-  openModal?: (post: Post) => void;
+  currentUserId: string | null;
+  onLikeToggle?: (likes: string[]) => void;
 }
 
 export default function PostActions({
   post,
   currentUserId,
-  openModal,
+  onLikeToggle,
 }: PostActionsProps) {
-  //   const liked = post.likes?.includes(currentUserId);
   const likes = Array.isArray(post.likes) ? post.likes : [];
   const liked = likes.includes(currentUserId);
   const router = useRouter();
 
-  const handleLikeToggle = async (
-    postId: string,
-    isLiked: boolean | undefined
-  ) => {
+  const handleLikeToggle = async (postId: string, isLiked: boolean) => {
     const postRef = doc(db, "posts", postId);
+
+    const updatedLikes = isLiked
+      ? likes.filter((id) => id !== currentUserId)
+      : [...likes, currentUserId!];
+
+    onLikeToggle?.(updatedLikes);
+
     try {
       await updateDoc(postRef, {
         likes: isLiked ? arrayRemove(currentUserId) : arrayUnion(currentUserId),
@@ -39,11 +42,7 @@ export default function PostActions({
 
   const handleCommentsClick = () => {
     if (!post?.id) return;
-    if (openModal) {
-      openModal(post); // apenas abre modal se for para abrir
-    } else {
-      router.push(`/feed/postId/${post.id}`, { scroll: false });
-    }
+    router.push(`/feed/postId/${post.id}`, { scroll: false });
   };
 
   return (

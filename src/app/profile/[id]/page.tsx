@@ -1,11 +1,6 @@
 import ProfilePage from "@/components/Profile";
 
-interface ProfilePageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function Profile({ params }: ProfilePageProps) {
-  return <ProfilePage userId={params.id} />;
+export default async function Profile({ params }: { params: { id: string } }) {
+  const userId = params.id;
+  return <ProfilePage userId={userId} />;
 }

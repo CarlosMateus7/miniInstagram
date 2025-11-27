@@ -9,7 +9,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus, Settings, LogOut } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Settings,
+  LogOut,
+  Heart,
+  MessageCircle,
+} from "lucide-react";
 import { db, auth } from "@/lib/firebase";
 import {
   doc,
@@ -20,8 +27,6 @@ import {
   where,
   getDocs,
   onSnapshot,
-  addDoc,
-  serverTimestamp,
   deleteDoc,
   Timestamp,
 } from "firebase/firestore";
@@ -29,14 +34,13 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { signOut, getAuth, onAuthStateChanged } from "firebase/auth";
 import { Post, Comment } from "../app/types/index";
 import PostModal from "./PostModal";
 
 const DEFAULT_PROFILE_IMAGE = "/default-avatar.png";
 
-// Função para lidar com Timestamp ou Date
 function getDateFromFirestore(
   value?: Timestamp | Date | string | number
 ): Date {
@@ -63,12 +67,32 @@ export default function ProfilePage({ userId }: { userId: string }) {
     {}
   );
   const [currentUserId, setCurrentUserId] = useState<string>("");
-  const [currentUserName, setCurrentUserName] = useState<string>("");
+  const [, setCurrentUserName] = useState<string>("");
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [currentPostIndex, setCurrentPostIndex] = useState<number>(0);
-  const router = useRouter();
 
-  // Obter usuário logado
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const postIdFromUrl = searchParams.get("post");
+
+  const sortedPosts = [...posts].sort(
+    (a, b) =>
+      getDateFromFirestore(b.createdAt).getTime() -
+      getDateFromFirestore(a.createdAt).getTime()
+  );
+
+  // Sincronizar modal com query param
+  useEffect(() => {
+    if (!postIdFromUrl || sortedPosts.length === 0) return;
+
+    const index = sortedPosts.findIndex((p) => p.id === postIdFromUrl);
+    if (index !== -1) {
+      setSelectedPostId(postIdFromUrl);
+      setCurrentPostIndex(index);
+    }
+  }, [postIdFromUrl, sortedPosts]);
+
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -80,7 +104,6 @@ export default function ProfilePage({ userId }: { userId: string }) {
     return () => unsubscribe();
   }, []);
 
-  // Buscar dados do usuário e posts
   useEffect(() => {
     const fetchUserData = async () => {
       const userDoc = await getDoc(doc(db, "users", userId));
@@ -120,27 +143,9 @@ export default function ProfilePage({ userId }: { userId: string }) {
     return () => unsubscribe();
   }, []);
 
-  // Atualizar índice do post selecionado
-  useEffect(() => {
-    if (selectedPostId) {
-      const postIndex = sortedPosts.findIndex((p) => p.id === selectedPostId);
-      if (postIndex !== -1) setCurrentPostIndex(postIndex);
-    }
-  }, [selectedPostId, posts]);
-
-  // Lista de posts ordenada por data (mais recente primeiro)
-  const sortedPosts = [...posts].sort(
-    (a, b) =>
-      getDateFromFirestore(b.createdAt).getTime() -
-      getDateFromFirestore(a.createdAt).getTime()
-  );
-
-  const openPostModal = (post: Post) => {
-    const postIndex = sortedPosts.findIndex((p) => p.id === post.id);
-    if (postIndex !== -1) {
-      setCurrentPostIndex(postIndex);
-      setSelectedPostId(post.id);
-    }
+  const closePostModal = () => {
+    setSelectedPostId(null);
+    router.replace(pathname);
   };
 
   const hasNext = currentPostIndex < sortedPosts.length - 1;
@@ -148,31 +153,24 @@ export default function ProfilePage({ userId }: { userId: string }) {
 
   const handleNextPost = () => {
     if (!hasNext) return;
-    setSelectedPostId(sortedPosts[currentPostIndex + 1].id);
+    const nextPostId = sortedPosts[currentPostIndex + 1].id;
+    setSelectedPostId(nextPostId);
+    setCurrentPostIndex(currentPostIndex + 1);
+
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set("post", nextPostId);
+    router.replace(`${pathname}?${newParams.toString()}`);
   };
 
   const handlePreviousPost = () => {
     if (!hasPrevious) return;
-    setSelectedPostId(sortedPosts[currentPostIndex - 1].id);
-  };
+    const prevPostId = sortedPosts[currentPostIndex - 1].id;
+    setSelectedPostId(prevPostId);
+    setCurrentPostIndex(currentPostIndex - 1);
 
-  const handleCommentSubmit = async (postId: string) => {
-    const commentText = newComments[postId];
-    if (!commentText?.trim()) return;
-
-    try {
-      await addDoc(collection(db, "comments"), {
-        postId,
-        userId: currentUserId,
-        userName: currentUserName,
-        text: commentText,
-        userAvatar: userPhotoURL || DEFAULT_PROFILE_IMAGE,
-        createdAt: serverTimestamp(),
-      });
-      setNewComments((prev) => ({ ...prev, [postId]: "" }));
-    } catch (error) {
-      console.error("Erro ao adicionar comentário:", error);
-    }
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.set("post", prevPostId);
+    router.replace(`${pathname}?${newParams.toString()}`);
   };
 
   const handleUploadPhoto = async () => {
@@ -219,7 +217,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
       const updatedPosts = posts.filter((p) => p.id !== postId);
       setPosts(updatedPosts);
       setPostCount(updatedPosts.length);
-      if (selectedPostId === postId) setSelectedPostId(null);
+      if (selectedPostId === postId) closePostModal();
       else if (posts.findIndex((p) => p.id === postId) < currentPostIndex)
         setCurrentPostIndex(currentPostIndex - 1);
     } catch (error) {
@@ -232,11 +230,12 @@ export default function ProfilePage({ userId }: { userId: string }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-start px-4">
       {/* Header */}
-      <div className="w-full flex items-center justify-start px-4 py-4">
+      <div className="w-full flex items-center justify-start px-4 py-4 w-32 h-32">
         <Link href="/feed">
           <Image
             src="/mini-instagram-logo.png"
             alt="Mini Instagram"
+            sizes="(max-width: 768px) 90pxw, 90px"
             width={90}
             height={90}
             className="cursor-pointer"
@@ -254,6 +253,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
                   src={userPhotoURL || DEFAULT_PROFILE_IMAGE}
                   alt="Foto de perfil"
                   fill
+                  sizes="(max-width: 768px) 100vw, 600px"
                   className="object-cover rounded-full"
                 />
               </div>
@@ -366,15 +366,32 @@ export default function ProfilePage({ userId }: { userId: string }) {
             sortedPosts.map((post, index) => (
               <div
                 key={post.id}
-                onClick={() => openPostModal(post)}
-                className="bg-gray-200 rounded-lg overflow-hidden shadow-md w-full aspect-square relative cursor-pointer"
+                onClick={() =>
+                  router.push(`/profile/${userId}/post/${post.id}`)
+                }
+                className="bg-gray-200 rounded-lg overflow-hidden shadow-md w-full aspect-square relative cursor-pointer group"
               >
                 <Image
                   src={post.imageUrl || "/default-post.png"}
                   alt={`Post ${index + 1}`}
                   fill
+                  sizes="(max-width: 768px) 100vw, 600px"
                   className="object-cover"
                 />
+
+                {/* Overlay hover */}
+                <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-6 text-white text-sm font-medium">
+                  <div className="flex items-center gap-1">
+                    <Heart className="w-5 h-5" />
+                    <span>{post.likes.length || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <MessageCircle className="w-5 h-5" />
+                    <span>
+                      {comments.filter((c) => c.postId === post.id).length}
+                    </span>
+                  </div>
+                </div>
               </div>
             ))
           ) : (
@@ -397,10 +414,9 @@ export default function ProfilePage({ userId }: { userId: string }) {
                 (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
             )}
           isOpen={!!selectedPostId}
-          onClose={() => setSelectedPostId(null)}
+          onClose={closePostModal}
           newComments={newComments}
           setNewComments={setNewComments}
-          handleCommentSubmit={handleCommentSubmit}
           onNext={handleNextPost}
           onPrevious={handlePreviousPost}
           hasNext={hasNext}
