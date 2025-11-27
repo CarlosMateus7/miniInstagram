@@ -13,12 +13,13 @@ import {
   where,
   getDocs,
   writeBatch,
+  deleteDoc,
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
 import PostModal from "./PostModal";
@@ -45,6 +46,7 @@ export default function Feed() {
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string>("/default-avatar.png");
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const auth = getAuth();
@@ -126,7 +128,6 @@ export default function Feed() {
       });
 
       setNewComments((prev) => ({ ...prev, [postId]: "" }));
-      // Comments will be updated automatically via onSnapshot
     } catch (error) {
       console.error("Erro ao adicionar comentário:", error);
     }
@@ -137,21 +138,35 @@ export default function Feed() {
 
     try {
       const postId = selectedPostIdForOptions;
-      const batch = writeBatch(db);
 
+      // 1. Buscar todos os comentários do post
       const commentsQuery = query(
         collection(db, "comments"),
         where("postId", "==", postId)
       );
+
+      console.log(postId);
+
+      console.log(commentsQuery);
       const commentsSnapshot = await getDocs(commentsQuery);
 
-      commentsSnapshot.forEach((commentDoc) => {
-        batch.delete(doc(db, "comments", commentDoc.id));
-      });
+      // Se não houver comentários, ainda assim deletamos o post
+      if (!commentsSnapshot.empty) {
+        const batch = writeBatch(db);
 
-      batch.delete(doc(db, "posts", postId));
+        commentsSnapshot.forEach((commentDoc) => {
+          batch.delete(commentDoc.ref);
+        });
 
-      await batch.commit();
+        // Deletar o post também no mesmo batch
+        const postRef = doc(db, "posts", postId);
+        batch.delete(postRef);
+
+        await batch.commit();
+      } else {
+        // Se não houver comentários, apenas deleta o post
+        await deleteDoc(doc(db, "posts", postId));
+      }
 
       setShowDeleteModal(false);
       setSelectedPostIdForOptions(null);
@@ -245,7 +260,6 @@ export default function Feed() {
           )}
         </div>
       </div>
-
       {/* Só mostra o modal do post clicado */}
       {showOptionsModal && selectedPostIdForOptions && (
         <PostOptionModal
@@ -261,7 +275,7 @@ export default function Feed() {
           }}
           onCopyLink={() => {
             setShowOptionsModal(false);
-            const postUrl = `${window.location.origin}/post/${selectedPostIdForOptions}`;
+            const postUrl = `${window.location.origin}/feed/postId/${selectedPostIdForOptions}`;
             navigator.clipboard.writeText(postUrl);
           }}
         />
@@ -287,7 +301,7 @@ export default function Feed() {
               post={currentPost}
               comments={currentPostComments}
               isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
+              onClose={() => router.replace(pathname)}
               newComments={newComments}
               setNewComments={setNewComments}
             />

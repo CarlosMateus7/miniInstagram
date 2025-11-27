@@ -38,21 +38,21 @@ export default function PostActionModal({
       <DialogContent
         aria-describedby={undefined}
         className="fixed 
-                   w-[40%] max-w-sm z-[99999] animate-fade-in p-0 [&>button]:hidden bg-gray-500"
+                   w-[40%] max-w-sm z-[100010] animate-fade-in p-0 [&>button]:hidden bg-gray-500"
       >
         <div className="bg-gray-500 rounded-2xl overflow-visible text-black">
           <div className="flex flex-col divide-y divide-gray-700/30">
+            <button
+              onClick={handleDelete}
+              className="block w-full h-12 text-center text-red-500 hover:bg-white/10 cursor-pointer"
+            >
+              Apagar
+            </button>
             <button
               onClick={handleEdit}
               className="block w-full h-12 text-center hover:bg-white/10 cursor-pointer"
             >
               Editar
-            </button>
-            <button
-              onClick={handleDelete}
-              className="block w-full h-12 text-center hover:bg-white/10 cursor-pointer"
-            >
-              Apagar
             </button>
             <button
               onClick={handleCopyLink}

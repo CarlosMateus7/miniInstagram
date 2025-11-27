@@ -56,6 +56,7 @@ export default function PostPage() {
   }, [postId]);
 
   if (!post) return null;
+  if (!id || Array.isArray(id)) return null;
 
   return (
     <main className="min-h-screen">

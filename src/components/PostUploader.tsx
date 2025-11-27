@@ -17,6 +17,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import Image from "next/image";
+
 export default function PostUploader({ userId }: { userId: string }) {
   const [caption, setCaption] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -91,11 +93,14 @@ export default function PostUploader({ userId }: { userId: string }) {
         />
 
         {previewUrl && (
-          <div className="w-full mt-4">
-            <img
+          <div className="relative w-full aspect-square rounded-2xl overflow-hidden">
+            <Image
               src={previewUrl}
-              alt="Preview"
-              className="w-full max-h-96 object-cover rounded-lg shadow"
+              alt="Post"
+              fill
+              sizes="(max-width: 768px) 100vw, 600px"
+              priority
+              className="object-cover"
             />
           </div>
         )}

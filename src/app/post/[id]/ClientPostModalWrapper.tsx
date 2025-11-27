@@ -26,7 +26,7 @@ export default function ClientPostModalWrapper({ post, comments }: Props) {
       isOpen={true}
       newComments={newComments}
       setNewComments={setNewComments}
-      onClose={() => router.back()}
+      onClose={() => router.push(`/feed`)}
     />
   );
 }

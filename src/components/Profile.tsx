@@ -27,7 +27,6 @@ import {
   where,
   getDocs,
   onSnapshot,
-  deleteDoc,
   Timestamp,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -211,19 +210,19 @@ export default function ProfilePage({ userId }: { userId: string }) {
     router.push("/login");
   };
 
-  const handleDeletePost = async (postId: string) => {
-    try {
-      await deleteDoc(doc(db, "posts", postId));
-      const updatedPosts = posts.filter((p) => p.id !== postId);
-      setPosts(updatedPosts);
-      setPostCount(updatedPosts.length);
-      if (selectedPostId === postId) closePostModal();
-      else if (posts.findIndex((p) => p.id === postId) < currentPostIndex)
-        setCurrentPostIndex(currentPostIndex - 1);
-    } catch (error) {
-      console.error("Erro ao excluir post:", error);
-    }
-  };
+  // const handleDeletePost = async (postId: string) => {
+  //   try {
+  //     await deleteDoc(doc(db, "posts", postId));
+  //     const updatedPosts = posts.filter((p) => p.id !== postId);
+  //     setPosts(updatedPosts);
+  //     setPostCount(updatedPosts.length);
+  //     if (selectedPostId === postId) closePostModal();
+  //     else if (posts.findIndex((p) => p.id === postId) < currentPostIndex)
+  //       setCurrentPostIndex(currentPostIndex - 1);
+  //   } catch (error) {
+  //     console.error("Erro ao excluir post:", error);
+  //   }
+  // };
 
   const onClose = () => setOpen(false);
 
@@ -357,7 +356,9 @@ export default function ProfilePage({ userId }: { userId: string }) {
 
       <Separator className="w-full my-8" />
 
-      <h3 className="text-xl font-semibold">Publicações</h3>
+      <h3 className="text-xl font-semibold">
+        {postCount > 1 ? "Publicações" : "Publicação"}
+      </h3>
 
       {/* Post Grid */}
       <div className="w-full mt-8">
@@ -421,7 +422,6 @@ export default function ProfilePage({ userId }: { userId: string }) {
           onPrevious={handlePreviousPost}
           hasNext={hasNext}
           hasPrevious={hasPrevious}
-          onDeletePost={handleDeletePost}
         />
       )}
     </div>

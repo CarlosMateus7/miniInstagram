@@ -8,13 +8,17 @@ import PostOptionModal from "./PostOptionModal";
 import DeleteModal from "./DeleteModal";
 import {
   doc,
-  deleteDoc,
   getDoc,
   Timestamp,
   collection,
   setDoc,
+  query,
+  where,
+  getDocs,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import EditPostModal from "./EditPostModal";
 
 interface PostModalProps {
   post: Post;
@@ -43,13 +47,14 @@ export default function PostModal({
   onPrevious,
   hasNext = false,
   hasPrevious = false,
-  onDeletePost,
-}: PostModalProps) {
+}: // onDeletePost,
+PostModalProps) {
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [authorAvatar, setAuthorAvatar] = useState("/default-avatar.png");
   const [localComments, setLocalComments] = useState<Comment[]>(comments);
   const [localPost, setLocalPost] = useState<Post>(post);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     setLocalPost(post);
@@ -104,11 +109,28 @@ export default function PostModal({
 
   const handleDeletePost = async () => {
     try {
-      if (onDeletePost) {
-        onDeletePost(post.id);
-      } else {
-        await deleteDoc(doc(db, "posts", post.id));
-      }
+      // 1. Buscar todos os comentários ligados ao post
+      const commentsQuery = query(
+        collection(db, "comments"),
+        where("postId", "==", post.id)
+      );
+      const commentsSnapshot = await getDocs(commentsQuery);
+
+      // 2. Criar um batch para deletar tudo de uma vez
+      const batch = writeBatch(db);
+
+      // 3. Deletar todos os comentários associados
+      commentsSnapshot.forEach((commentDoc) => {
+        batch.delete(commentDoc.ref);
+      });
+
+      // 4. Deletar o post
+      batch.delete(doc(db, "posts", post.id));
+
+      // 5. Confirmar deletes
+      await batch.commit();
+
+      // 6. Fechar modais
       setShowDeleteModal(false);
       setShowOptionsModal(false);
       onClose();
@@ -156,10 +178,7 @@ export default function PostModal({
   });
 
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-70 z-[99998] flex justify-center items-center"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 bg-black bg-opacity-70 z-[99998] flex justify-center items-center">
       <button
         onClick={onClose}
         aria-label="Fechar modal"
@@ -194,110 +213,132 @@ export default function PostModal({
         </button>
       )}
       <div
-        className="bg-white rounded-lg flex w-[80vw] h-[90vh] max-h-screen overflow-hidden relative"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+        onClick={onClose}
       >
-        {/* Imagem do post */}
-        <div className="w-1/2 bg-black relative">
-          <Image
-            src={post.imageUrl}
-            alt="Post"
-            fill
-            sizes="(max-width: 768px) 100vw, 600px"
-            className="object-contain"
-            priority
-          />
-        </div>
-
-        {/* Área de detalhes à direita */}
-        <div className="w-1/2 p-4 flex flex-col overflow-y-auto">
-          {/* Autor */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <Image
-                src={authorAvatar}
-                alt={post.userName}
-                width={40}
-                height={40}
-                className="rounded-full object-cover h-10 mr-3"
-              />
-              <span className="font-medium">{post.userName}</span>
-            </div>
-            {post.userId === currentUserId && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowOptionsModal(true);
-                }}
-                className="text-gray-500 hover:text-gray-700 bg-transparent border-none outline-none cursor-pointer"
-                aria-label="Mais opções"
-              >
-                <MoreHorizontal size={24} />
-              </button>
-            )}
+        <div
+          className="bg-white rounded-lg flex w-[80vw] h-[90vh] max-h-screen overflow-hidden relative"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Imagem do post */}
+          <div className="w-1/2 bg-black relative">
+            <Image
+              src={post.imageUrl}
+              alt="Post"
+              fill
+              sizes="(max-width: 768px) 100vw, 600px"
+              className="object-contain"
+              priority
+            />
           </div>
 
-          {post.caption && (
-            <>
-              <hr className="my-2 border-gray-300" />
-              {/* Descrição do post */}
-              <p className="text-sm text-gray-700 mb-4">
-                <strong>{post.userName}</strong>: {post.caption}
-              </p>
-            </>
-          )}
-
-          <hr className="my-2 border-gray-300" />
-          {/* Comentários */}
-          <div className="flex-grow overflow-y-auto pr-1 mb-4">
-            {localComments.length > 0 ? (
-              localComments.map((comment, index) => (
-                <div
-                  key={comment.id ?? `comment-${index}`}
-                  className="mb-2 text-sm"
+          {/* Área de detalhes à direita */}
+          <div className="w-1/2 p-4 flex flex-col overflow-y-auto">
+            {/* Autor */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Image
+                  src={authorAvatar}
+                  alt={post.userName}
+                  width={40}
+                  height={40}
+                  className="rounded-full object-cover h-10 mr-3"
+                />
+                <span className="font-medium">{post.userName}</span>
+              </div>
+              {post.userId === currentUserId && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowOptionsModal(true);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 bg-transparent border-none outline-none cursor-pointer"
+                  aria-label="Mais opções"
                 >
-                  <strong>{comment.userName}:</strong> {comment.text}
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500">Sem comentários</p>
+                  <MoreHorizontal size={24} />
+                </button>
+              )}
+            </div>
+
+            {localPost.caption && (
+              <>
+                <hr className="my-2 border-gray-300" />
+                {/* Descrição do post */}
+                <p className="text-sm text-gray-700 mb-4">
+                  <div className="flex items-center">
+                    <Image
+                      src={authorAvatar}
+                      alt={post.userName}
+                      width={30}
+                      height={30}
+                      className="rounded-full object-cover h-7 w-7 mr-3"
+                    />
+                    <strong>{post.userName}</strong>: {localPost.caption}
+                  </div>
+                </p>
+              </>
             )}
+
+            <hr className="my-2 border-gray-300" />
+            {/* Comentários */}
+            <div className="flex-grow overflow-y-auto pr-1 mb-4">
+              {localComments.length > 0 ? (
+                localComments.map((comment, index) => (
+                  <div
+                    key={comment.id ?? `comment-${index}`}
+                    className="mb-2 text-sm"
+                  >
+                    <div className="flex items-center">
+                      <Image
+                        src={authorAvatar}
+                        alt={post.userName}
+                        width={30}
+                        height={30}
+                        className="rounded-full object-cover h-7 w-7 mr-3"
+                      />
+                      <strong>{comment.userName}</strong>: {comment.text}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">Sem comentários</p>
+              )}
+            </div>
+
+            <PostActions
+              post={localPost}
+              currentUserId={currentUserId}
+              onLikeToggle={(updatedLikes) => {
+                setLocalPost((prev) => ({ ...prev, likes: updatedLikes }));
+              }}
+            />
+
+            <p className="text-[12px] text-gray-500 italic mt-1 mb-3">
+              {formattedDate}
+            </p>
+
+            {/* Campo de novo comentário */}
+            <CommentInput
+              postId={post.id}
+              value={newComments[post.id] || ""}
+              onChange={(text) =>
+                setNewComments((prev) => ({
+                  ...prev,
+                  [post.id]: text,
+                }))
+              }
+              onSubmit={() => handleCommentSubmit(post.id)}
+            />
           </div>
-
-          <PostActions
-            post={localPost}
-            currentUserId={currentUserId}
-            onLikeToggle={(updatedLikes) => {
-              setLocalPost((prev) => ({ ...prev, likes: updatedLikes }));
-            }}
-          />
-
-          <p className="text-[12px] text-gray-500 italic mt-1 mb-3">
-            {formattedDate}
-          </p>
-
-          {/* Campo de novo comentário */}
-          <CommentInput
-            postId={post.id}
-            value={newComments[post.id] || ""}
-            onChange={(text) =>
-              setNewComments((prev) => ({
-                ...prev,
-                [post.id]: text,
-              }))
-            }
-            onSubmit={() => handleCommentSubmit(post.id)}
-          />
         </div>
       </div>
-
       {/* Modais de opções e delete */}
       {showOptionsModal && (
         <PostOptionModal
           isOpen={showOptionsModal}
           onClose={() => setShowOptionsModal(false)}
           onEdit={() => {
-            console.log("Editar post", post.id);
+            setIsEditing(true);
             setShowOptionsModal(false);
           }}
           onDelete={() => {
@@ -306,8 +347,7 @@ export default function PostModal({
           }}
           onCopyLink={() => {
             setShowOptionsModal(false);
-            const postUrl = `${window.location.origin}/post/${post.id}`;
-            navigator.clipboard.writeText(postUrl);
+            navigator.clipboard.writeText(window.location.href);
           }}
         />
       )}
@@ -317,6 +357,18 @@ export default function PostModal({
           isOpen={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
           onConfirm={handleDeletePost}
+        />
+      )}
+
+      {isEditing && (
+        <EditPostModal
+          post={localPost}
+          isOpen={isEditing}
+          onClose={() => setIsEditing(false)}
+          onUpdatePost={(updatedPost) => {
+            setLocalPost(updatedPost);
+            setIsEditing(false);
+          }}
         />
       )}
     </div>
