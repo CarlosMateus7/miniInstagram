@@ -19,6 +19,7 @@ export default function EditProfilePage({ userId }: { userId: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,16 +72,25 @@ export default function EditProfilePage({ userId }: { userId: string }) {
       {/* Photo */}
       <div className="flex flex-col items-center mb-4">
         <Image
-          src={photoURL || DEFAULT_PROFILE_IMAGE}
+          src={preview || photoURL || DEFAULT_PROFILE_IMAGE}
           alt="Foto de perfil"
           width={100}
           height={100}
           className="rounded-full object-cover mb-2"
         />
+
         <Input
           type="file"
           accept="image/*"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          className="cursor-pointer"
+          onChange={(e) => {
+            const selected = e.target.files?.[0] || null;
+            setFile(selected);
+
+            if (selected) {
+              setPreview(URL.createObjectURL(selected));
+            }
+          }}
         />
       </div>
 
@@ -90,6 +100,7 @@ export default function EditProfilePage({ userId }: { userId: string }) {
         value={userName}
         onChange={(e) => setUserName(e.target.value)}
         className="mb-4"
+        placeholder="Insere um nome"
       />
 
       {/* Biography */}

@@ -17,6 +17,7 @@ export interface Comment {
   userName: string;
   text: string;
   createdAt: Timestamp;
+  userAvatar: string;
 }
 
 export interface User {

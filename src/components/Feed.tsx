@@ -27,6 +27,7 @@ import { Comment, Post } from "@/app/types";
 import DeleteModal from "./DeleteModal";
 import PostOptionModal from "./PostOptionModal";
 import PostCard from "./PostCard";
+import EditPostModal from "./EditPostModal";
 
 export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -47,6 +48,8 @@ export default function Feed() {
   const [userAvatar, setUserAvatar] = useState<string>("/default-avatar.png");
   const router = useRouter();
   const pathname = usePathname();
+  const [isEditing, setIsEditing] = useState(false);
+  const [localPost, setLocalPost] = useState<Post | null>(null);
 
   useEffect(() => {
     const auth = getAuth();
@@ -223,7 +226,6 @@ export default function Feed() {
                   <PostCard
                     key={post.id}
                     post={post}
-                    userAvatar={userAvatar}
                     currentUserId={currentUserId}
                     postComments={postComments}
                     newComments={newComments}
@@ -266,7 +268,12 @@ export default function Feed() {
           isOpen={showOptionsModal}
           onClose={() => setShowOptionsModal(false)}
           onEdit={() => {
-            console.log("Editar post", selectedPostIdForOptions);
+            const postToEdit = posts.find(
+              (p) => p.id === selectedPostIdForOptions
+            );
+            if (postToEdit) setLocalPost(postToEdit);
+
+            setIsEditing(true);
             setShowOptionsModal(false);
           }}
           onDelete={() => {
@@ -307,6 +314,23 @@ export default function Feed() {
             />
           );
         })()}
+
+      {isEditing && localPost && (
+        <EditPostModal
+          post={localPost}
+          isOpen={isEditing}
+          onClose={() => setIsEditing(false)}
+          onUpdatePost={(updatedPost) => {
+            // Atualiza o post no estado global
+            setPosts((prev) =>
+              prev.map((p) => (p.id === updatedPost.id ? updatedPost : p))
+            );
+
+            setLocalPost(updatedPost);
+            setIsEditing(false);
+          }}
+        />
+      )}
     </>
   );
 }

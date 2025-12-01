@@ -8,10 +8,10 @@ import { Comment, Post } from "@/app/types";
 import PostActions from "./PostActions";
 import CommentInput from "./CommentInput";
 import { Card, CardContent } from "@/components/ui/card";
+import { useUserAvatar } from "./hooks/useUserAvatar";
 
 interface PostCardProps {
   post: Post;
-  userAvatar: string;
   currentUserId: string;
   postComments: Comment[];
   newComments: Record<string, string>;
@@ -24,7 +24,6 @@ interface PostCardProps {
 
 export default function PostCard({
   post,
-  userAvatar,
   currentUserId,
   postComments,
   newComments,
@@ -35,6 +34,7 @@ export default function PostCard({
   setShowOptionsModal,
 }: PostCardProps) {
   const router = useRouter();
+  const avatar = useUserAvatar(post.userId);
 
   return (
     <Card key={post.id} className="pb-[16px] mb-[20px]">
@@ -46,7 +46,7 @@ export default function PostCard({
             className="flex items-center gap-[10px] cursor-pointer hover:opacity-80"
           >
             <Image
-              src={userAvatar || "/default-avatar.png"}
+              src={avatar || "/default-avatar.png"}
               alt="Avatar"
               width={40}
               height={40}

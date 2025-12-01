@@ -67,11 +67,23 @@ PostModalProps) {
 
     try {
       const commentRef = doc(collection(db, "comments"));
+      const userDoc = await getDoc(doc(db, "users", currentUserId));
+
+      let commenterName = "User";
+      let commenterAvatar = "/default-avatar.png";
+
+      if (userDoc.exists()) {
+        const u = userDoc.data();
+        commenterName = u.userName || "User";
+        commenterAvatar = u.photoURL || "/default-avatar.png";
+      }
+
       const newComment = {
         id: commentRef.id,
         postId,
         userId: currentUserId,
-        userName: post.userName,
+        userName: commenterName,
+        userAvatar: commenterAvatar,
         text,
         createdAt: Timestamp.fromDate(new Date()),
       };
@@ -264,7 +276,7 @@ PostModalProps) {
               <>
                 <hr className="my-2 border-gray-300" />
                 {/* Descrição do post */}
-                <p className="text-sm text-gray-700 mb-4">
+                <div className="text-sm text-gray-700 mb-4">
                   <div className="flex items-center">
                     <Image
                       src={authorAvatar}
@@ -275,7 +287,7 @@ PostModalProps) {
                     />
                     <strong>{post.userName}</strong>: {localPost.caption}
                   </div>
-                </p>
+                </div>
               </>
             )}
 
@@ -290,7 +302,7 @@ PostModalProps) {
                   >
                     <div className="flex items-center">
                       <Image
-                        src={authorAvatar}
+                        src={comment.userAvatar || "/default-avatar.png"}
                         alt={post.userName}
                         width={30}
                         height={30}

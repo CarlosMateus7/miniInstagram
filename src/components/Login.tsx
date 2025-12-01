@@ -107,7 +107,7 @@ const Login = () => {
 
       await createUserProfile(appUser);
 
-      router.push("/feed");
+      router.push(`/edit-profile/${user.uid}`);
     } catch (error) {
       console.error("Erro ao criar conta:", error);
     } finally {
