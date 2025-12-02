@@ -10,13 +10,21 @@ import {
 import ClientPostModalWrapper from "./ClientPostModalWrapper";
 import { Post, Comment } from "@/app/types";
 
-export default async function PostPage({ params }: { params: { id: string } }) {
-  const postId = params.id;
+interface PostPageParams {
+  id: string;
+}
+
+interface PostPageProps {
+  params: PostPageParams;
+}
+
+export default async function PostPage({ params }: PostPageProps) {
+  const { id: postId } = params;
 
   const postSnap = await getDoc(doc(db, "posts", postId));
 
   if (!postSnap.exists()) {
-    return <div className="text-center mt-10">Post não encontrado.</div>;
+    return <div className="text-center mt-10">Post not found.</div>;
   }
 
   const postData = postSnap.data();
