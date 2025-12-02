@@ -97,7 +97,7 @@ PostModalProps) {
         [postId]: "",
       }));
     } catch (err) {
-      console.error("Erro ao enviar comentário:", err);
+      console.error("Error sending comment", err);
     }
   };
 
@@ -121,33 +121,27 @@ PostModalProps) {
 
   const handleDeletePost = async () => {
     try {
-      // 1. Buscar todos os comentários ligados ao post
       const commentsQuery = query(
         collection(db, "comments"),
         where("postId", "==", post.id)
       );
       const commentsSnapshot = await getDocs(commentsQuery);
 
-      // 2. Criar um batch para deletar tudo de uma vez
       const batch = writeBatch(db);
 
-      // 3. Deletar todos os comentários associados
       commentsSnapshot.forEach((commentDoc) => {
         batch.delete(commentDoc.ref);
       });
 
-      // 4. Deletar o post
       batch.delete(doc(db, "posts", post.id));
 
-      // 5. Confirmar deletes
       await batch.commit();
 
-      // 6. Fechar modais
       setShowDeleteModal(false);
       setShowOptionsModal(false);
       onClose();
     } catch (error) {
-      console.error("Erro ao excluir post:", error);
+      console.error("Error deleting post:", error);
     }
   };
 
@@ -162,7 +156,7 @@ PostModalProps) {
           setAuthorAvatar(userDoc.data().photoURL || "/default-avatar.png");
         }
       } catch (err) {
-        console.error("Erro ao buscar avatar:", err);
+        console.error("Error searching for avatar:", err);
       }
     }
 
@@ -198,7 +192,7 @@ PostModalProps) {
       >
         <X size={24} />
       </button>
-      {/* Botão Previous */}
+      {/* Previous Button*/}
       {hasPrevious && onPrevious && (
         <button
           onClick={(e) => {
@@ -206,12 +200,12 @@ PostModalProps) {
             onPrevious();
           }}
           className="absolute left-[calc(10vw-3rem)] top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 z-10 transition-colors"
-          aria-label="Post anterior"
+          aria-label="Previous Post"
         >
           <ChevronLeft size={24} />
         </button>
       )}
-      {/* Botão Next */}
+      {/* Next Button*/}
       {hasNext && onNext && (
         <button
           onClick={(e) => {
@@ -219,7 +213,7 @@ PostModalProps) {
             onNext();
           }}
           className="absolute right-[calc(10vw-3rem)] top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 z-10 transition-colors"
-          aria-label="Próximo post"
+          aria-label="Next Post"
         >
           <ChevronRight size={24} />
         </button>
@@ -232,7 +226,7 @@ PostModalProps) {
           className="bg-white rounded-lg flex w-[80vw] h-[90vh] max-h-screen overflow-hidden relative"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Imagem do post */}
+          {/* Post image */}
           <div className="w-1/2 bg-black relative">
             <Image
               src={post.imageUrl}
@@ -244,7 +238,6 @@ PostModalProps) {
             />
           </div>
 
-          {/* Área de detalhes à direita */}
           <div className="w-1/2 p-4 flex flex-col overflow-y-auto">
             {/* Autor */}
             <div className="flex items-center justify-between mb-4">
@@ -265,7 +258,7 @@ PostModalProps) {
                     setShowOptionsModal(true);
                   }}
                   className="text-gray-500 hover:text-gray-700 bg-transparent border-none outline-none cursor-pointer"
-                  aria-label="Mais opções"
+                  aria-label="More options"
                 >
                   <MoreHorizontal size={24} />
                 </button>
@@ -275,7 +268,7 @@ PostModalProps) {
             {localPost.caption && (
               <>
                 <hr className="my-2 border-gray-300" />
-                {/* Descrição do post */}
+                {/* Post description */}
                 <div className="text-sm text-gray-700 mb-4">
                   <div className="flex items-center">
                     <Image
@@ -292,7 +285,7 @@ PostModalProps) {
             )}
 
             <hr className="my-2 border-gray-300" />
-            {/* Comentários */}
+            {/* Comments */}
             <div className="flex-grow overflow-y-auto pr-1 mb-4">
               {localComments.length > 0 ? (
                 localComments.map((comment, index) => (
@@ -313,7 +306,7 @@ PostModalProps) {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500">Sem comentários</p>
+                <p className="text-sm text-gray-500">No comment.</p>
               )}
             </div>
 
@@ -329,7 +322,6 @@ PostModalProps) {
               {formattedDate}
             </p>
 
-            {/* Campo de novo comentário */}
             <CommentInput
               postId={post.id}
               value={newComments[post.id] || ""}
@@ -344,7 +336,7 @@ PostModalProps) {
           </div>
         </div>
       </div>
-      {/* Modais de opções e delete */}
+
       {showOptionsModal && (
         <PostOptionModal
           isOpen={showOptionsModal}

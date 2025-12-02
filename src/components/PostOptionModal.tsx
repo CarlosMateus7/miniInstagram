@@ -46,25 +46,25 @@ export default function PostActionModal({
               onClick={handleDelete}
               className="block w-full h-12 text-center text-red-500 hover:bg-white/10 cursor-pointer"
             >
-              Apagar
+              Delete
             </button>
             <button
               onClick={handleEdit}
               className="block w-full h-12 text-center hover:bg-white/10 cursor-pointer"
             >
-              Editar
+              Edit
             </button>
             <button
               onClick={handleCopyLink}
               className="block w-full h-12 text-center hover:bg-white/10 cursor-pointer"
             >
-              Copiar ligação
+              Copy Link
             </button>
             <button
               onClick={onClose}
               className="block w-full h-12 text-center font-medium hover:bg-white/10 cursor-pointer"
             >
-              Cancelar
+              Cancel
             </button>
           </div>
         </div>

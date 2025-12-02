@@ -34,7 +34,7 @@ export default function PostUploader({ userId }: { userId: string }) {
     setLoading(true);
 
     try {
-      // Upload ao Cloudinary
+      // Upload to Cloudinary
       const formData = new FormData();
       formData.append("file", imageFile);
       formData.append("upload_preset", "unsigned_preset");
@@ -53,7 +53,7 @@ export default function PostUploader({ userId }: { userId: string }) {
       const userDoc = await getDoc(doc(db, "users", userId));
       const userData = userDoc.exists() ? userDoc.data() : {};
 
-      const postUserName = userData.userName || "Utilizador";
+      const postUserName = userData.userName || "User";
 
       await addDoc(collection(db, "posts"), {
         imageUrl,
@@ -77,7 +77,7 @@ export default function PostUploader({ userId }: { userId: string }) {
   return (
     <Card className="max-w-xl mx-auto mt-8">
       <CardContent className="space-y-4 p-6">
-        <h2 className="text-xl font-bold">Criar Post</h2>
+        <h2 className="text-xl font-bold">Create Post</h2>
 
         <Input
           type="file"
@@ -106,7 +106,7 @@ export default function PostUploader({ userId }: { userId: string }) {
         )}
 
         <Textarea
-          placeholder="Legenda"
+          placeholder="Caption"
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
         />
@@ -117,12 +117,12 @@ export default function PostUploader({ userId }: { userId: string }) {
           disabled={loading}
           className="mr-4"
         >
-          Cancelar
+          Cancel
         </Button>
 
         <Button onClick={handleUpload} disabled={loading || !imageFile}>
           {loading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
-          Publicar
+          Publish
         </Button>
       </CardContent>
     </Card>

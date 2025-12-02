@@ -95,7 +95,7 @@ export default function EditProfilePage({ userId }: { userId: string }) {
       </div>
 
       {/* Name */}
-      <label className="block text-sm font-medium mb-1">Nome</label>
+      <label className="block text-sm font-medium mb-1">Name</label>
       <Input
         value={userName}
         onChange={(e) => setUserName(e.target.value)}
@@ -104,19 +104,19 @@ export default function EditProfilePage({ userId }: { userId: string }) {
       />
 
       {/* Biography */}
-      <label className="block text-sm font-medium mb-1">Biografia</label>
+      <label className="block text-sm font-medium mb-1">Biography</label>
       <Textarea
         value={biography}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
           setBiography(e.target.value)
         }
         className="mb-4"
-        placeholder="Fala um pouco sobre ti..."
+        placeholder="Tell me a little about yourself...."
       />
 
       <Button onClick={handleSave} disabled={loading} className="w-full mb-4">
         {loading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
-        Guardar alterações
+        Save changes
       </Button>
 
       <Button
@@ -126,7 +126,7 @@ export default function EditProfilePage({ userId }: { userId: string }) {
         className="w-full"
       >
         {loading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : null}
-        Cancelar
+        Cancel
       </Button>
     </div>
   );

@@ -9,10 +9,10 @@ import {
   onSnapshot,
   query,
   orderBy,
+  Timestamp,
 } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Timestamp } from "@/app/types";
 
 type Comment = {
   id: string;
@@ -51,7 +51,7 @@ export default function CommentSection({ postId }: { postId: string }) {
     await addDoc(commentsRef, {
       text,
       userId: user.uid,
-      displayName: user.displayName || "Anônimo",
+      displayName: user.displayName || "User",
       userAvatar: user.photoURL || "/default-avatar.png",
       createdAt: serverTimestamp(),
     });
@@ -71,12 +71,12 @@ export default function CommentSection({ postId }: { postId: string }) {
 
       <div className="flex gap-2">
         <Input
-          placeholder="Comentar..."
+          placeholder="Comment..."
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
         <Button onClick={handleSubmit} disabled={!text.trim()}>
-          Enviar
+          Send
         </Button>
       </div>
     </div>

@@ -37,6 +37,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { signOut, getAuth, onAuthStateChanged } from "firebase/auth";
 import { Post, Comment } from "../app/types/index";
 import PostModal from "./PostModal";
+import UserListModal from "./UserListModal";
 
 const DEFAULT_PROFILE_IMAGE = "/default-avatar.png";
 
@@ -69,6 +70,11 @@ export default function ProfilePage({ userId }: { userId: string }) {
   const [, setCurrentUserName] = useState<string>("");
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [currentPostIndex, setCurrentPostIndex] = useState<number>(0);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [showFollowers, setShowFollowers] = useState(false);
+  const [showFollowing, setShowFollowing] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
@@ -81,7 +87,6 @@ export default function ProfilePage({ userId }: { userId: string }) {
       getDateFromFirestore(a.createdAt).getTime()
   );
 
-  // Sincronizar modal com query param
   useEffect(() => {
     if (!postIdFromUrl || sortedPosts.length === 0) return;
 
@@ -97,20 +102,34 @@ export default function ProfilePage({ userId }: { userId: string }) {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUserId(user.uid);
-        setCurrentUserName(user.displayName || "Utilizador");
+        setCurrentUserName(user.displayName || "User");
       }
     });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    if (!currentUserId) return;
+
+    const fetchData = async () => {
       const userDoc = await getDoc(doc(db, "users", userId));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setUserPhotoURL(data.photoURL || null);
-        setUserName(data.userName || "Nome não disponível");
-        setBiography(data.biography || null);
+      const currentDoc = await getDoc(doc(db, "users", currentUserId));
+
+      if (userDoc.exists() && currentDoc.exists()) {
+        const profileData = userDoc.data();
+        const currentData = currentDoc.data();
+
+        setUserPhotoURL(profileData.photoURL || null);
+        setUserName(profileData.userName || "Name not available");
+        setBiography(profileData.biography || null);
+        setFollowersCount(profileData.followers?.length || 0);
+
+        if (userId === currentUserId) {
+          setFollowingCount(currentData.following?.length || 0);
+        } else {
+          setFollowingCount(profileData.following?.length || 0);
+          setIsFollowing(profileData.followers?.includes(currentUserId));
+        }
       }
     };
 
@@ -125,9 +144,9 @@ export default function ProfilePage({ userId }: { userId: string }) {
       setPostCount(postsData.length);
     };
 
-    fetchUserData();
+    fetchData();
     fetchPostsData();
-  }, [userId]);
+  }, [userId, currentUserId]);
 
   // Load comments
   useEffect(() => {
@@ -210,19 +229,51 @@ export default function ProfilePage({ userId }: { userId: string }) {
     router.push("/login");
   };
 
-  // const handleDeletePost = async (postId: string) => {
-  //   try {
-  //     await deleteDoc(doc(db, "posts", postId));
-  //     const updatedPosts = posts.filter((p) => p.id !== postId);
-  //     setPosts(updatedPosts);
-  //     setPostCount(updatedPosts.length);
-  //     if (selectedPostId === postId) closePostModal();
-  //     else if (posts.findIndex((p) => p.id === postId) < currentPostIndex)
-  //       setCurrentPostIndex(currentPostIndex - 1);
-  //   } catch (error) {
-  //     console.error("Erro ao excluir post:", error);
-  //   }
-  // };
+  const handleFollowToggle = async () => {
+    if (!currentUserId || currentUserId === userId) return;
+
+    const profileRef = doc(db, "users", userId);
+    const currentRef = doc(db, "users", currentUserId);
+
+    const [profileSnap, currentSnap] = await Promise.all([
+      getDoc(profileRef),
+      getDoc(currentRef),
+    ]);
+
+    if (!profileSnap.exists() || !currentSnap.exists()) return;
+
+    const profileData = profileSnap.data();
+    const currentData = currentSnap.data();
+
+    const newFollowers = [...(profileData.followers || [])];
+
+    if (isFollowing) {
+      // Unfollow
+      const idx = newFollowers.indexOf(currentUserId);
+      if (idx !== -1) newFollowers.splice(idx, 1);
+      setFollowersCount(newFollowers.length);
+      setIsFollowing(false);
+    } else {
+      // Follow
+      if (!newFollowers.includes(currentUserId))
+        newFollowers.push(currentUserId);
+      setFollowersCount(newFollowers.length);
+      setIsFollowing(true);
+    }
+
+    await updateDoc(profileRef, { followers: newFollowers });
+
+    const updatedFollowing = [...(currentData.following || [])];
+
+    if (isFollowing) {
+      const idx = updatedFollowing.indexOf(userId);
+      if (idx !== -1) updatedFollowing.splice(idx, 1);
+    } else {
+      if (!updatedFollowing.includes(userId)) updatedFollowing.push(userId);
+    }
+
+    await updateDoc(currentRef, { following: updatedFollowing });
+  };
 
   const onClose = () => setOpen(false);
 
@@ -259,7 +310,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
             </DialogTrigger>
             <DialogContent aria-describedby={undefined}>
               <DialogHeader>
-                <DialogTitle>Editar Fotografia</DialogTitle>
+                <DialogTitle>Edit Profile Photo</DialogTitle>
               </DialogHeader>
               <Input
                 type="file"
@@ -268,7 +319,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
               />
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" onClick={onClose}>
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button
                   onClick={handleUploadPhoto}
@@ -278,10 +329,10 @@ export default function ProfilePage({ userId }: { userId: string }) {
                   {uploading && (
                     <Loader2 className="animate-spin w-4 h-4 mr-2" />
                   )}
-                  Carregar nova
+                  CLoad new
                 </Button>
                 <Button variant="destructive" onClick={handleRemovePhoto}>
-                  Remover
+                  Delete
                 </Button>
               </div>
             </DialogContent>
@@ -295,43 +346,73 @@ export default function ProfilePage({ userId }: { userId: string }) {
               variant="secondary"
               onClick={() => router.push(`/edit-profile/${userId}`)}
             >
-              Editar Perfil
+              Edit Profile
             </Button>
 
-            <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Settings className="w-5 h-5" />
-                </Button>
-              </DialogTrigger>
+            {currentUserId === userId && (
+              <Dialog
+                open={logoutDialogOpen}
+                onOpenChange={setLogoutDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Settings className="w-5 h-5" />
+                  </Button>
+                </DialogTrigger>
 
-              <DialogContent aria-describedby={undefined}>
-                <DialogHeader>
-                  <DialogTitle>Definições</DialogTitle>
-                </DialogHeader>
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Terminar Sessão
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setLogoutDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-              </DialogContent>
-            </Dialog>
+                <DialogContent aria-describedby={undefined}>
+                  <DialogHeader>
+                    <DialogTitle>Definitions</DialogTitle>
+                  </DialogHeader>
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    End Session
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setLogoutDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                </DialogContent>
+              </Dialog>
+            )}
           </h2>
 
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium">{postCount}</span>{" "}
-            {postCount > 1 ? "publicações" : "publicação"}
-          </p>
+          <div className="text-sm text-muted-foreground flex gap-4">
+            <p>
+              <span className="font-medium">{postCount}</span>{" "}
+              {postCount === 1 ? "Post" : "Posts"}
+            </p>
+
+            <p
+              className="cursor-pointer"
+              onClick={() => setShowFollowers(true)}
+            >
+              <span className="font-medium">{followersCount}</span> Followers
+            </p>
+
+            <p
+              className="cursor-pointer"
+              onClick={() => setShowFollowing(true)}
+            >
+              <span className="font-medium">{followingCount}</span> Following
+            </p>
+          </div>
+
+          {currentUserId !== userId && (
+            <Button
+              variant={isFollowing ? "secondary" : "default"}
+              onClick={handleFollowToggle}
+            >
+              {isFollowing ? "Unfollow" : "Follow"}
+            </Button>
+          )}
 
           {biography && (
             <p className="text-sm text-muted-foreground max-w-md whitespace-pre-line">
@@ -341,23 +422,25 @@ export default function ProfilePage({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {/* Upload novo post */}
-      <div className="flex flex-col items-center py-10">
-        <Link href={`/upload/${currentUserId}`}>
-          <Button
-            variant="outline"
-            className="rounded-full w-16 h-16 p-0 flex items-center justify-center"
-          >
-            <Plus className="w-6 h-6" />
-          </Button>
-        </Link>
-        <span className="text-sm mt-2 text-muted-foreground">Novo</span>
-      </div>
+      {/* Upload new post */}
+      {currentUserId === userId && (
+        <div className="flex flex-col items-center py-10">
+          <Link href={`/upload/${currentUserId}`}>
+            <Button
+              variant="outline"
+              className="rounded-full w-16 h-16 p-0 flex items-center justify-center"
+            >
+              <Plus className="w-6 h-6" />
+            </Button>
+          </Link>
+          <span className="text-sm mt-2 text-muted-foreground">New</span>
+        </div>
+      )}
 
       <Separator className="w-full my-8" />
 
       <h3 className="text-xl font-semibold">
-        {postCount > 1 ? "Publicações" : "Publicação"}
+        {postCount > 1 ? "Posts" : "Post"}
       </h3>
 
       {/* Post Grid */}
@@ -397,7 +480,7 @@ export default function ProfilePage({ userId }: { userId: string }) {
             ))
           ) : (
             <p className="text-gray-500 col-span-3 text-center">
-              Não existem Posts
+              There are no posts.
             </p>
           )}
         </div>
@@ -424,6 +507,20 @@ export default function ProfilePage({ userId }: { userId: string }) {
           hasPrevious={hasPrevious}
         />
       )}
+
+      <UserListModal
+        userId={userId}
+        type="followers"
+        open={showFollowers}
+        onClose={() => setShowFollowers(false)}
+      />
+
+      <UserListModal
+        userId={userId}
+        type="following"
+        open={showFollowing}
+        onClose={() => setShowFollowing(false)}
+      />
     </div>
   );
 }

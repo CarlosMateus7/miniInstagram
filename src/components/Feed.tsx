@@ -28,6 +28,7 @@ import DeleteModal from "./DeleteModal";
 import PostOptionModal from "./PostOptionModal";
 import PostCard from "./PostCard";
 import EditPostModal from "./EditPostModal";
+import FeedSearch from "./FeedSearch";
 
 export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -57,17 +58,15 @@ export default function Feed() {
       if (user) {
         setCurrentUserId(user.uid);
 
-        // Buscar dados da Firestore (users)
         const userDoc = await getDoc(doc(db, "users", user.uid));
 
         if (userDoc.exists()) {
           const data = userDoc.data();
 
-          setUserName(data.userName || "Utilizador");
+          setUserName(data.userName || "User");
           setUserAvatar(data.photoURL);
         } else {
-          // fallback caso o user ainda não exista na coleção
-          setUserName(user.displayName || "Utilizador");
+          setUserName(user.displayName || "User");
           setUserAvatar(user.photoURL || "");
         }
       }
@@ -132,7 +131,7 @@ export default function Feed() {
 
       setNewComments((prev) => ({ ...prev, [postId]: "" }));
     } catch (error) {
-      console.error("Erro ao adicionar comentário:", error);
+      console.error("Error adding comment:", error);
     }
   };
 
@@ -142,7 +141,6 @@ export default function Feed() {
     try {
       const postId = selectedPostIdForOptions;
 
-      // 1. Buscar todos os comentários do post
       const commentsQuery = query(
         collection(db, "comments"),
         where("postId", "==", postId)
@@ -153,7 +151,6 @@ export default function Feed() {
       console.log(commentsQuery);
       const commentsSnapshot = await getDocs(commentsQuery);
 
-      // Se não houver comentários, ainda assim deletamos o post
       if (!commentsSnapshot.empty) {
         const batch = writeBatch(db);
 
@@ -161,20 +158,18 @@ export default function Feed() {
           batch.delete(commentDoc.ref);
         });
 
-        // Deletar o post também no mesmo batch
         const postRef = doc(db, "posts", postId);
         batch.delete(postRef);
 
         await batch.commit();
       } else {
-        // Se não houver comentários, apenas deleta o post
         await deleteDoc(doc(db, "posts", postId));
       }
 
       setShowDeleteModal(false);
       setSelectedPostIdForOptions(null);
     } catch (error) {
-      console.error("Erro ao excluir post e comentários:", error);
+      console.error("Error deleting post and comments:", error);
     }
   };
 
@@ -197,6 +192,7 @@ export default function Feed() {
           </div>
         </div>
         <div className="col-span-6 space-y-6 mt-[95px]">
+          <FeedSearch currentUserId={currentUserId} />
           {/* Delete Post Modal */}
           {showDeleteModal && (
             <DeleteModal
@@ -255,14 +251,12 @@ export default function Feed() {
                   className="object-cover rounded-full h-10"
                 />
               </div>
-              <span className="text-sm font-medium">
-                {userName || "Utilizador"}
-              </span>
+              <span className="text-sm font-medium">{userName || "User"}</span>
             </div>
           )}
         </div>
       </div>
-      {/* Só mostra o modal do post clicado */}
+
       {showOptionsModal && selectedPostIdForOptions && (
         <PostOptionModal
           isOpen={showOptionsModal}
@@ -321,7 +315,6 @@ export default function Feed() {
           isOpen={isEditing}
           onClose={() => setIsEditing(false)}
           onUpdatePost={(updatedPost) => {
-            // Atualiza o post no estado global
             setPosts((prev) =>
               prev.map((p) => (p.id === updatedPost.id ? updatedPost : p))
             );

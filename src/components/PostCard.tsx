@@ -42,7 +42,7 @@ export default function PostCard({
         {/* Post Header */}
         <div className="flex justify-between items-center pb-[12px] pl-[14px] pr-[10px]">
           <div
-            onClick={() => router.push(`/profile/${currentUserId}`)}
+            onClick={() => router.push(`/profile/${post.userId}`)}
             className="flex items-center gap-[10px] cursor-pointer hover:opacity-80"
           >
             <Image
@@ -86,14 +86,14 @@ export default function PostCard({
         </div>
 
         <div className="flex flex-col pl-[12px] pr-[12px]">
-          {/* Likes + Comentários */}
+          {/* Likes + Comments */}
           <PostActions post={post} currentUserId={currentUserId} />
 
           {/* Caption */}
           {post.caption && (
             <p className="text-sm text-gray-700 mt-[8px] mb-[8px]">
               <strong
-                onClick={() => router.push(`/profile/${currentUserId}`)}
+                onClick={() => router.push(`/profile/${post.userId}`)}
                 className="cursor-pointer"
               >
                 {post.userName ?? post.userId}
@@ -102,7 +102,7 @@ export default function PostCard({
             </p>
           )}
 
-          {/* Ver comentários */}
+          {/* See comments */}
           {postComments.length > 0 && openModal && (
             <button
               onClick={() =>
@@ -112,8 +112,8 @@ export default function PostCard({
               style={{ appearance: "none" }}
             >
               {postComments.length === 1
-                ? "Ver 1 comentário"
-                : `Ver todos os ${postComments.length} comentários`}
+                ? "See 1 comment"
+                : `See all ${postComments.length} comments`}
             </button>
           )}
 

@@ -22,7 +22,6 @@ export default function EditPostModal({
 }: EditPostModalProps) {
   const [localPostState, setLocalPostState] = useState<Post>(post);
 
-  // Sincroniza quando o post muda
   useEffect(() => {
     setLocalPostState(post);
   }, [post]);
@@ -31,13 +30,10 @@ export default function EditPostModal({
 
   const handleSave = async () => {
     try {
-      // Atualiza no Firestore
       await updateDoc(doc(db, "posts", post.id), {
         caption: localPostState.caption,
-        // aqui você poderia atualizar outros campos se necessário
       });
 
-      // Atualiza localmente no PostModal
       onUpdatePost(localPostState);
 
       onClose();
@@ -53,7 +49,7 @@ export default function EditPostModal({
     >
       <button
         onClick={onClose}
-        aria-label="Fechar modal"
+        aria-label="Close modal"
         className="absolute top-4 right-4 text-white hover:text-gray-800 z-10"
       >
         <X size={24} />
@@ -62,18 +58,18 @@ export default function EditPostModal({
         className="bg-white rounded-lg flex w-[80vw] h-[90vh] max-h-screen overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Topo */}
+        {/* Top */}
         <div className="absolute top-0 left-0 w-full flex items-center justify-between p-4 border-b border-gray-300 bg-white z-10">
           <button className="text-blue-500 font-medium" onClick={onClose}>
-            Cancelar
+            Cancel
           </button>
-          <h2 className="font-semibold text-lg">Editar Post</h2>
+          <h2 className="font-semibold text-lg">Edit Post</h2>
           <button className="text-blue-500 font-medium" onClick={handleSave}>
-            Concluído
+            Completed
           </button>
         </div>
 
-        {/* Coluna da imagem */}
+        {/* Image column */}
         <div className="w-1/2 bg-black relative">
           <Image
             src={localPostState.imageUrl || "/default-post.png"}
@@ -84,14 +80,14 @@ export default function EditPostModal({
           />
         </div>
 
-        {/* Coluna de detalhes */}
+        {/* Column details */}
         <div className="w-1/2 flex flex-col overflow-y-auto pt-16 p-4">
           <textarea
             value={localPostState.caption}
             onChange={(e) =>
               setLocalPostState({ ...localPostState, caption: e.target.value })
             }
-            placeholder="Escreva uma descrição..."
+            placeholder="Write a description...."
             className="w-full h-full border rounded p-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>

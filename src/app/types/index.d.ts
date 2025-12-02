@@ -24,7 +24,9 @@ export interface User {
   uid: string;
   biography?: string;
   userName: string;
-  email: string;
+  email?: string;
   photoURL: string | null;
-  createdAt: Date;
+  createdAt?: Date;
+  followers?: string[];
+  following?: string[];
 }

@@ -13,6 +13,7 @@ import {
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { User as AppUser } from "@/app/types";
+import Image from "next/image";
 
 type LoginFormInputs = {
   email: string;
@@ -28,16 +29,18 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Converte FirebaseUser para AppUser
+  // Converts FirebaseUser to AppUser
   const firebaseUserToAppUser = (user: FirebaseUser): AppUser => ({
     uid: user.uid,
-    userName: user.displayName || "Utilizador sem nome",
+    userName: user.displayName || "User without a name",
     email: user.email || "",
     photoURL: user.photoURL || null,
     createdAt: new Date(),
+    followers: [],
+    following: [],
   });
 
-  // Cria perfil no Firestore se não existir
+  // Create a Firestore profile if one doesn't already exist.
   const createUserProfile = async (user: AppUser) => {
     const userRef = doc(db, "users", user.uid);
     const userDoc = await getDoc(userRef);
@@ -49,11 +52,13 @@ const Login = () => {
         email: user.email,
         photoURL: user.photoURL,
         createdAt: user.createdAt,
+        followers: user.followers,
+        following: user.following,
       });
     }
   };
 
-  // Login com Google
+  // Login with Google
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
@@ -65,13 +70,13 @@ const Login = () => {
 
       router.push("/feed");
     } catch (error) {
-      console.error("Erro ao fazer login com Google:", error);
+      console.error("Error logging in with Google:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Login com email e senha
+  // Login with email and password
   const handleEmailLogin = async (data: LoginFormInputs) => {
     try {
       setLoading(true);
@@ -87,13 +92,13 @@ const Login = () => {
 
       router.push("/feed");
     } catch (error) {
-      console.error("Erro ao fazer login com email:", error);
+      console.error("Error logging in with email:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Criar conta com email e senha
+  // Create an account with email and password.
   const handleEmailSignup = async (data: LoginFormInputs) => {
     try {
       setLoading(true);
@@ -109,18 +114,40 @@ const Login = () => {
 
       router.push(`/edit-profile/${user.uid}`);
     } catch (error) {
-      console.error("Erro ao criar conta:", error);
+      console.error("Error creating account:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="max-w-sm w-full bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-bold text-center mb-6">Login</h2>
+    <div className="flex justify-center items-center h-screen bg-gray-50">
+      <div className="max-w-sm w-full bg-white p-8 rounded-xl shadow-md">
+        {/* Logo */}
+        <div className="w-full flex justify-center mb-2">
+          <Image
+            src="/mini-instagram-logo.png"
+            alt="Mini Instagram"
+            width={100}
+            height={100}
+            className="cursor-pointer"
+            priority
+          />
+        </div>
 
-        {/* Formulário para Login (email + senha) */}
+        <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 max-w-xs mx-auto mb-6">
+          <p className="text-xs text-yellow-800 text-center">
+            This project is merely a demonstration portfolio, with no profit or
+            commercial intent. All images and data are fictitious or used for
+            testing purposes only.
+          </p>
+        </div>
+
+        <h2 className="text-2xl font-semibold text-center mb-6 mt-6 text-gray-800">
+          Login
+        </h2>
+
+        {/* Form with Login */}
         <form onSubmit={handleSubmit(handleEmailLogin)} className="space-y-4">
           <div>
             <label
@@ -132,7 +159,7 @@ const Login = () => {
             <input
               id="email"
               type="email"
-              {...register("email", { required: "Email é obrigatório" })}
+              {...register("email", { required: "Email is required." })}
               className="w-full p-2 border rounded-md mt-2"
             />
             {errors.email && (
@@ -145,12 +172,12 @@ const Login = () => {
               htmlFor="password"
               className="block text-sm font-medium text-gray-700"
             >
-              Senha
+              Password
             </label>
             <input
               id="password"
               type="password"
-              {...register("password", { required: "Senha é obrigatória" })}
+              {...register("password", { required: "Password is required" })}
               className="w-full p-2 border rounded-md mt-2"
             />
             {errors.password && (
@@ -160,33 +187,33 @@ const Login = () => {
 
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-2 rounded-md mt-4"
+            className="w-full bg-blue-500 text-white py-2 rounded-md mt-4 hover:bg-blue-600 transition"
             disabled={loading}
           >
-            {loading ? "Loading..." : "Entrar com Email"}
+            {loading ? "Loading..." : "Log in with Email"}
           </button>
         </form>
 
-        {/* Botão Login com Google */}
-        <div className="text-center mt-4">
+        {/* Login with Google */}
+        <div className="mt-4">
           <button
             onClick={handleGoogleLogin}
-            className="w-full bg-red-500 text-white py-2 rounded-md"
+            className="w-full bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transition"
             disabled={loading}
           >
-            {loading ? "Loading..." : "Entrar com Google"}
+            {loading ? "Loading..." : "Log in with Google"}
           </button>
         </div>
 
-        {/* Botão para Criar Conta - chama handleEmailSignup */}
-        <div className="text-center mt-4">
+        {/* Create account */}
+        <div className="mt-4">
           <form onSubmit={handleSubmit(handleEmailSignup)}>
             <button
               type="submit"
-              className="w-full bg-green-500 text-white py-2 rounded-md"
+              className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition"
               disabled={loading}
             >
-              {loading ? "Loading..." : "Criar uma conta"}
+              {loading ? "Loading..." : "Create account"}
             </button>
           </form>
         </div>

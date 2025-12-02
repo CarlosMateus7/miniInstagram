@@ -31,21 +31,21 @@ export default function DeleteModal({
         className="max-w-sm  p-6 w-[40%] rounded-md shadow-lg bg-white space-y-4 z-[99999] [&>button]:hidden"
       >
         <DialogHeader>
-          <DialogTitle>Excluir Post</DialogTitle>
+          <DialogTitle>Delete Post</DialogTitle>
           <DialogDescription>
-            Tem certeza que deseja excluir este post?
+            Are you sure you want to delete this post?
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-center gap-2">
           <Button variant="outline" onClick={onClose}>
-            Cancelar
+            Cancel
           </Button>
           <Button
             variant="outline"
             onClick={onConfirm}
             className="hover:bg-red-500"
           >
-            Excluir
+            Delete
           </Button>
         </div>
       </DialogContent>
