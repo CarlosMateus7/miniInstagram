@@ -1,52 +1,63 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
 import {
   doc,
   getDoc,
   collection,
-  getDocs,
   query,
   where,
+  getDocs,
 } from "firebase/firestore";
-import ClientPostModalWrapper from "./ClientPostModalWrapper";
 import { Post, Comment } from "@/app/types";
+import ClientPostModalWrapper from "./ClientPostModalWrapper";
 
-interface PostPageParams {
-  id: string;
-}
+export default function PostPage() {
+  const { id: postId } = useParams();
+  // const router = useRouter();
 
-interface PostPageProps {
-  params: PostPageParams;
-}
+  const [post, setPost] = useState<Post | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  // const currentUserId = auth.currentUser?.uid ?? null;
 
-export default async function PostPage({ params }: PostPageProps) {
-  const { id: postId } = params;
+  useEffect(() => {
+    if (!postId || Array.isArray(postId)) return;
 
-  const postSnap = await getDoc(doc(db, "posts", postId));
+    const fetchData = async () => {
+      // Fetch post
+      const postSnap = await getDoc(doc(db, "posts", postId));
+      if (!postSnap.exists()) {
+        console.warn("Post not found");
+        return;
+      }
+      const postData = postSnap.data();
+      setPost({
+        id: postSnap.id,
+        imageUrl: postData.imageUrl,
+        caption: postData.caption,
+        userId: postData.userId,
+        userName: postData.userName,
+        createdAt: postData.createdAt,
+        likes: postData.likes ?? [],
+      });
 
-  if (!postSnap.exists()) {
-    return <div className="text-center mt-10">Post not found.</div>;
-  }
+      // Fetch comments
+      const commentsSnap = await getDocs(
+        query(collection(db, "comments"), where("postId", "==", postId))
+      );
+      const commentsData: Comment[] = commentsSnap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<Comment, "id">),
+      }));
+      setComments(commentsData);
+    };
 
-  const postData = postSnap.data();
+    fetchData();
+  }, [postId]);
 
-  const post: Post = {
-    id: postSnap.id,
-    imageUrl: postData.imageUrl,
-    caption: postData.caption,
-    userId: postData.userId,
-    userName: postData.userName,
-    createdAt: postData.createdAt,
-    likes: postData.likes ?? [],
-  };
-
-  const commentsSnap = await getDocs(
-    query(collection(db, "comments"), where("postId", "==", postId))
-  );
-
-  const comments: Comment[] = commentsSnap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Omit<Comment, "id">),
-  }));
+  if (!post) return <div className="text-center mt-10">Loading post...</div>;
 
   return <ClientPostModalWrapper post={post} comments={comments} />;
 }
