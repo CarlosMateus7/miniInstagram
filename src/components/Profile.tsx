@@ -283,8 +283,8 @@ export default function ProfilePage({ userId }: { userId: string }) {
       <div className="w-full flex items-center justify-start px-4 py-4 w-32 h-32">
         <Link href="/feed">
           <Image
-            src="/mini-instagram-logo.png"
-            alt="Mini Instagram"
+            src="/picshare-logo.png"
+            alt="Picshare"
             sizes="(max-width: 768px) 90pxw, 90px"
             width={90}
             height={90}

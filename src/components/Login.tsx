@@ -126,8 +126,8 @@ const Login = () => {
         {/* Logo */}
         <div className="w-full flex justify-center mb-2">
           <Image
-            src="/mini-instagram-logo.png"
-            alt="Mini Instagram"
+            src="/picshare-logo.png"
+            alt="Picshare"
             width={100}
             height={100}
             className="cursor-pointer"

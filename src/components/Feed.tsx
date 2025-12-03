@@ -180,8 +180,8 @@ export default function Feed() {
           <div className="w-full flex items-center justify-start px-4 py-4">
             <Link href="/feed">
               <Image
-                src="/mini-instagram-logo.png"
-                alt="Mini Instagram"
+                src="/picshare-logo.png"
+                alt="Picshare"
                 sizes="100vw"
                 priority
                 width={90}

@@ -312,7 +312,7 @@ PostModalProps) {
 
             <PostActions
               post={localPost}
-              currentUserId={currentUserId}
+              currentUserId={currentUserId || ""}
               onLikeToggle={(updatedLikes) => {
                 setLocalPost((prev) => ({ ...prev, likes: updatedLikes }));
               }}

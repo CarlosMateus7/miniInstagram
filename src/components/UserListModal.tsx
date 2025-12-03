@@ -31,12 +31,14 @@ export default function UserListModal({
 
   const loadList = async () => {
     const data = await fetchUserList(userId, type);
-    setList(data);
+    setList(
+      data.map((user) => ({
+        id: user.uid,
+        userName: user.userName || "",
+        photoURL: user.photoURL || "",
+      }))
+    );
   };
-
-  const filtered = list.filter((u) =>
-    u.userName.toLowerCase().includes(query.toLowerCase())
-  );
 
   if (!open) return null;
 
@@ -60,7 +62,7 @@ export default function UserListModal({
         />
 
         <div className="flex flex-col gap-3">
-          {filtered.map((user) => (
+          {list.map((user) => (
             <Link
               key={user.id}
               href={`/profile/${user.id}`}
@@ -77,7 +79,7 @@ export default function UserListModal({
             </Link>
           ))}
 
-          {filtered.length === 0 && (
+          {list.length === 0 && (
             <p className="text-gray-500 text-center py-6">No users found</p>
           )}
         </div>
