@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { auth, googleProvider } from "../lib/firebase";
+import { auth, googleProvider } from "../lib/firebase-client";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -11,7 +11,7 @@ import {
   User as FirebaseUser,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db } from "../lib/firebase-client";
 import { User as AppUser } from "@/app/types";
 import Image from "next/image";
 

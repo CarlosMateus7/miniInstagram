@@ -3,7 +3,7 @@
 import { Heart, MessageCircle } from "lucide-react";
 
 import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase-client";
 import { Post } from "@/app/types";
 import { useRouter } from "next/navigation";
 

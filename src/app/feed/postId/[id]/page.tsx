@@ -10,7 +10,7 @@ import {
   where,
   getDocs,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase-client";
 import { Post, Comment } from "@/app/types";
 import ClientPostModalWrapper from "@/app/post/[id]/ClientPostModalWrapper";
 

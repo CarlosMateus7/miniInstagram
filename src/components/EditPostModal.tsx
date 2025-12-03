@@ -5,7 +5,7 @@ import Image from "next/image";
 import { X } from "lucide-react";
 import { Post } from "@/app/types";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase-client";
 
 interface EditPostModalProps {
   post: Post;

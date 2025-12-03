@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase-client";
 import { getDoc, doc } from "firebase/firestore";
 
 export function useUserAvatar(userId: string) {

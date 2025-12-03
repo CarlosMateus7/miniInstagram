@@ -21,7 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase-client";
 import PostModal from "./PostModal";
 import { Comment, Post } from "@/app/types";
 import DeleteModal from "./DeleteModal";
@@ -51,6 +51,13 @@ export default function Feed() {
   const pathname = usePathname();
   const [isEditing, setIsEditing] = useState(false);
   const [localPost, setLocalPost] = useState<Post | null>(null);
+
+  async function GET() {
+    console.log("PORT:", process.env.PORT);
+    return Response.json({ ok: true });
+  }
+
+  GET();
 
   useEffect(() => {
     const auth = getAuth();
