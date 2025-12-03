@@ -52,13 +52,6 @@ export default function Feed() {
   const [isEditing, setIsEditing] = useState(false);
   const [localPost, setLocalPost] = useState<Post | null>(null);
 
-  async function GET() {
-    console.log("PORT:", process.env.PORT);
-    return Response.json({ ok: true });
-  }
-
-  GET();
-
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
