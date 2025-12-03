@@ -14,6 +14,7 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase-client";
 import { User as AppUser } from "@/app/types";
 import Image from "next/image";
+import { setCookie } from "cookies-next";
 
 type LoginFormInputs = {
   email: string;
@@ -58,12 +59,22 @@ const Login = () => {
     }
   };
 
+  // Save Firebase token in cookies (used by middleware)
+  const saveTokenInCookie = async (user: FirebaseUser) => {
+    const token = await user.getIdToken();
+    setCookie("firebase-token", token, {
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+  };
+
   // Login with Google
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+
+      await saveTokenInCookie(user);
 
       const appUser = firebaseUserToAppUser(user);
       await createUserProfile(appUser);
@@ -85,9 +96,12 @@ const Login = () => {
         data.email,
         data.password
       );
-      const user = userCredential.user;
-      const appUser = firebaseUserToAppUser(user);
 
+      const user = userCredential.user;
+
+      await saveTokenInCookie(user);
+
+      const appUser = firebaseUserToAppUser(user);
       await createUserProfile(appUser);
 
       router.push("/feed");
@@ -107,9 +121,12 @@ const Login = () => {
         data.email,
         data.password
       );
-      const user = userCredential.user;
-      const appUser = firebaseUserToAppUser(user);
 
+      const user = userCredential.user;
+
+      await saveTokenInCookie(user);
+
+      const appUser = firebaseUserToAppUser(user);
       await createUserProfile(appUser);
 
       router.push(`/edit-profile/${user.uid}`);

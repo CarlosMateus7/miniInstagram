@@ -38,6 +38,7 @@ import { signOut, getAuth, onAuthStateChanged } from "firebase/auth";
 import { Post, Comment } from "../app/types/index";
 import PostModal from "./PostModal";
 import UserListModal from "./UserListModal";
+import { deleteCookie } from "cookies-next";
 
 const DEFAULT_PROFILE_IMAGE = "/default-avatar.png";
 
@@ -225,8 +226,19 @@ export default function ProfilePage({ userId }: { userId: string }) {
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/login");
+    try {
+      await signOut(auth);
+
+      deleteCookie("session");
+      deleteCookie("user");
+      deleteCookie("token");
+
+      localStorage.removeItem("user");
+
+      router.push("/login");
+    } catch (error) {
+      console.error("Error doing Logout", error);
+    }
   };
 
   const handleFollowToggle = async () => {
